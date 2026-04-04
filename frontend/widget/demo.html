@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ImmoPlus — Agence immobilière Lyon</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #f8fafc; color: #1e293b; }
+
+    header {
+      background: #1d4ed8;
+      color: white;
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    header .logo { font-size: 24px; font-weight: 700; }
+    header .tagline { font-size: 13px; opacity: 0.8; }
+
+    .hero {
+      background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%);
+      color: white;
+      padding: 80px 32px;
+      text-align: center;
+    }
+    .hero h1 { font-size: 42px; font-weight: 700; margin-bottom: 16px; }
+    .hero p { font-size: 18px; opacity: 0.85; max-width: 560px; margin: 0 auto 32px; }
+    .hero .cta {
+      background: white;
+      color: #1d4ed8;
+      font-weight: 600;
+      padding: 14px 28px;
+      border-radius: 8px;
+      border: none;
+      font-size: 15px;
+      cursor: pointer;
+    }
+
+    .features {
+      max-width: 900px;
+      margin: 60px auto;
+      padding: 0 32px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+    .feature {
+      background: white;
+      border-radius: 12px;
+      padding: 28px 24px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
+    .feature .icon { font-size: 32px; margin-bottom: 12px; }
+    .feature h3 { font-size: 16px; margin-bottom: 8px; }
+    .feature p { font-size: 13.5px; color: #64748b; line-height: 1.5; }
+
+    .properties {
+      max-width: 900px;
+      margin: 0 auto 80px;
+      padding: 0 32px;
+    }
+    .properties h2 { font-size: 24px; font-weight: 700; margin-bottom: 24px; }
+    .property-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .property-card {
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 1px 4px rgba(0,0,0,.07);
+    }
+    .property-img {
+      height: 140px;
+      background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+    }
+    .property-body { padding: 16px; }
+    .property-body .price { font-size: 18px; font-weight: 700; color: #1d4ed8; margin-bottom: 4px; }
+    .property-body .title { font-size: 13.5px; font-weight: 600; margin-bottom: 4px; }
+    .property-body .meta { font-size: 12px; color: #64748b; }
+
+    .chat-cta {
+      background: #eff6ff;
+      border: 2px dashed #bfdbfe;
+      border-radius: 16px;
+      max-width: 560px;
+      margin: 0 auto 80px;
+      padding: 40px 32px;
+      text-align: center;
+    }
+    .chat-cta h2 { font-size: 22px; font-weight: 700; margin-bottom: 10px; color: #1d4ed8; }
+    .chat-cta p { font-size: 14px; color: #475569; margin-bottom: 20px; line-height: 1.6; }
+    .chat-cta .arrow { font-size: 28px; animation: bounce 1.5s infinite; }
+    @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(6px)} }
+
+    footer {
+      text-align: center;
+      padding: 24px;
+      font-size: 12px;
+      color: #94a3b8;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    @media (max-width: 680px) {
+      .features, .property-grid { grid-template-columns: 1fr; }
+      .hero h1 { font-size: 28px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">🏠 ImmoPlus</div>
+    <div class="tagline">Agence immobilière — Lyon &amp; Région</div>
+  </div>
+</header>
+
+<section class="hero">
+  <h1>Trouvez votre bien idéal à Lyon</h1>
+  <p>Notre assistant IA est disponible 24h/24 pour vous aider à trouver l'appartement ou la maison de vos rêves.</p>
+  <button class="cta" onclick="document.getElementById('ap-widget-btn').click()">
+    💬 Parler à l'assistant
+  </button>
+</section>
+
+<section class="features">
+  <div class="feature">
+    <div class="icon">🤖</div>
+    <h3>Assistant IA 24/7</h3>
+    <p>Disponible à toute heure pour répondre à vos questions et qualifier votre projet immobilier.</p>
+  </div>
+  <div class="feature">
+    <div class="icon">🔍</div>
+    <h3>Recherche intelligente</h3>
+    <p>Décrivez votre projet en langage naturel, notre IA trouve les biens qui correspondent à vos critères.</p>
+  </div>
+  <div class="feature">
+    <div class="icon">📋</div>
+    <h3>20+ biens disponibles</h3>
+    <p>Appartements, maisons et terrains dans toute l'agglomération lyonnaise.</p>
+  </div>
+</section>
+
+<section class="properties">
+  <h2>Nos biens à la une</h2>
+  <div class="property-grid">
+    <div class="property-card">
+      <div class="property-img">🏢</div>
+      <div class="property-body">
+        <div class="price">285 000 €</div>
+        <div class="title">Beau T3 lumineux proche Garibaldi</div>
+        <div class="meta">Lyon 3ème · 72 m² · 3 pièces</div>
+      </div>
+    </div>
+    <div class="property-card">
+      <div class="property-img">🏡</div>
+      <div class="property-body">
+        <div class="price">480 000 €</div>
+        <div class="title">Maison de ville avec jardin</div>
+        <div class="meta">Tassin-la-Demi-Lune · 130 m² · 5 pièces</div>
+      </div>
+    </div>
+    <div class="property-card">
+      <div class="property-img">🌆</div>
+      <div class="property-body">
+        <div class="price">545 000 €</div>
+        <div class="title">T4 standing vue sur Saône</div>
+        <div class="meta">Lyon Confluence · 105 m² · 4 pièces</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="chat-cta">
+  <h2>Vous ne trouvez pas votre bonheur ?</h2>
+  <p>
+    Décrivez votre projet à notre assistant IA — budget, surface, quartier, nombre de pièces —
+    et il vous présentera les biens les plus adaptés parmi notre catalogue complet.
+  </p>
+  <div class="arrow">👇</div>
+</div>
+
+<footer>
+  © 2026 ImmoPlus — Démo AutoPilot Immo (projet portfolio IA)
+</footer>
+
+<!-- AutoPilot Immo Widget -->
+<link rel="stylesheet" href="chatbot.css" />
+<script src="chatbot.js" data-api="http://localhost:8000"></script>
+
+</body>
+</html>

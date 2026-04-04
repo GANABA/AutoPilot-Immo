@@ -1,0 +1,61 @@
+services:
+  # ── FastAPI Web Service ────────────────────────────────────────────────────
+  - type: web
+    name: autopilot-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: autopilot-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: autopilot-redis
+          type: redis
+          property: connectionString
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_PHONE_NUMBER
+        sync: false
+    healthCheckPath: /health
+
+  # ── Celery Worker ──────────────────────────────────────────────────────────
+  - type: worker
+    name: autopilot-celery
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerCommand: celery -A app.tasks.celery_app worker -l info
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: autopilot-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: autopilot-redis
+          type: redis
+          property: connectionString
+      - key: OPENAI_API_KEY
+        sync: false
+
+databases:
+  - name: autopilot-db
+    databaseName: autopilot
+    user: autopilot_user
+    plan: free
+
+  - name: autopilot-redis
+    plan: free

@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Environment variables — NEVER commit secrets
+.env
+.env.*
+!.env.example
+
+# Uploads (user data — not in repo)
+data/uploads/
+
+# Node
+node_modules/
+frontend/dashboard/dist/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code
+.claude/
+
+# Alembic — keep migrations, ignore pyc
+alembic/versions/__pycache__/
+
+# Logs
+*.log
+celerybeat-schedule
+
+# Docker
+*.env.docker
