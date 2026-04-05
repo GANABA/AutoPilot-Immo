@@ -32,4 +32,4 @@ COPY --from=frontend-builder /app/frontend/dashboard/dist/ frontend/dashboard/di
 
 WORKDIR /app/backend
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "cd /app && alembic upgrade head && cd /app/backend && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
