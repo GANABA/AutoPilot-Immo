@@ -3,6 +3,7 @@ services:
   - type: web
     name: autopilot-api
     runtime: docker
+    plan: free                  # Free tier — spins down after 15min inactivity
     dockerfilePath: ./Dockerfile
     envVars:
       - key: DATABASE_URL
@@ -26,17 +27,3 @@ services:
       - key: TWILIO_PHONE_NUMBER
         sync: false
     healthCheckPath: /health
-
-  # ── Celery Worker ──────────────────────────────────────────────────────────
-  - type: worker
-    name: autopilot-celery
-    runtime: docker
-    dockerfilePath: ./Dockerfile
-    dockerCommand: celery -A app.tasks.celery_app worker -l info
-    envVars:
-      - key: DATABASE_URL
-        sync: false
-      - key: REDIS_URL
-        sync: false
-      - key: OPENAI_API_KEY
-        sync: false
