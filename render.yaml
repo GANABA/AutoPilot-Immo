@@ -6,14 +6,9 @@ services:
     dockerfilePath: ./Dockerfile
     envVars:
       - key: DATABASE_URL
-        fromDatabase:
-          name: autopilot-db
-          property: connectionString
+        sync: false          # Set manually: Supabase connection string
       - key: REDIS_URL
-        fromService:
-          name: autopilot-redis
-          type: redis
-          property: connectionString
+        sync: false          # Set manually: Upstash Redis URL
       - key: OPENAI_API_KEY
         sync: false
       - key: SECRET_KEY
@@ -40,22 +35,8 @@ services:
     dockerCommand: celery -A app.tasks.celery_app worker -l info
     envVars:
       - key: DATABASE_URL
-        fromDatabase:
-          name: autopilot-db
-          property: connectionString
+        sync: false
       - key: REDIS_URL
-        fromService:
-          name: autopilot-redis
-          type: redis
-          property: connectionString
+        sync: false
       - key: OPENAI_API_KEY
         sync: false
-
-databases:
-  - name: autopilot-db
-    databaseName: autopilot
-    user: autopilot_user
-    plan: free
-
-  - name: autopilot-redis
-    plan: free
