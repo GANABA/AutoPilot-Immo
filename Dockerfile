@@ -3,7 +3,7 @@ FROM node:20-slim AS frontend-builder
 
 WORKDIR /app/frontend/dashboard
 COPY frontend/dashboard/package*.json ./
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 COPY frontend/dashboard/ ./
 RUN npm run build
 
