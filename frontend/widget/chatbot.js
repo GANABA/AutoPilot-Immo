@@ -15,7 +15,10 @@
     document.currentScript ||
     document.querySelector('script[src*="chatbot"]');
   const API_BASE =
-    (currentScript && currentScript.dataset.api) || "http://localhost:8000";
+    (currentScript && currentScript.dataset.api) ||
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://localhost:8000'
+      : window.location.origin);
   const WS_BASE = API_BASE.replace(/^http/, "ws"); // transform http:// to ws:// and https:// to wss://
 
   // ── Inject CSS ──────────────────────────────────────────────────────────────
