@@ -5,7 +5,7 @@ WORKDIR /app/frontend/dashboard
 COPY frontend/dashboard/package*.json ./
 RUN npm ci --legacy-peer-deps
 COPY frontend/dashboard/ ./
-RUN npm run build
+RUN VITE_BASE_URL=/dashboard/ npm run build
 
 # ── Stage 2: Python API ───────────────────────────────────────────────────────
 FROM python:3.11-slim
