@@ -65,12 +65,17 @@ export default function DashboardPage() {
       <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100">
         <h2 className="font-semibold text-slate-700 mb-4">Accès rapides</h2>
         <div className="grid grid-cols-2 gap-3">
-          {[
-            { icon: '🤖', label: 'Chatbot RAG', desc: 'Widget prospect en temps réel', href: 'http://localhost:8000/widget/demo.html' },
-            { icon: '🎙️', label: 'Assistant Vocal', desc: 'Pipeline Whisper → GPT → TTS', href: 'http://localhost:8000/widget/voice_demo.html' },
-            { icon: '📋', label: 'API Docs', desc: 'Swagger / OpenAPI', href: 'http://localhost:8000/docs' },
-            { icon: '🔧', label: 'Biens', desc: 'Gérer le catalogue', action: 'properties' },
-          ].map(item => (
+          {(() => {
+            const BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+              ? 'http://localhost:8000'
+              : window.location.origin
+            return [
+              { icon: '🤖', label: 'Chatbot RAG', desc: 'Widget prospect en temps réel', href: `${BASE}/widget/demo.html` },
+              { icon: '🎙️', label: 'Assistant Vocal', desc: 'Pipeline Whisper → GPT → TTS', href: `${BASE}/widget/voice_demo.html` },
+              { icon: '📋', label: 'API Docs', desc: 'Swagger / OpenAPI', href: `${BASE}/docs` },
+              { icon: '🔧', label: 'Biens', desc: 'Gérer le catalogue', action: 'properties' },
+            ]
+          })().map(item => (
             <a
               key={item.label}
               href={item.href || '#'}
