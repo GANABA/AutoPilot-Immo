@@ -11,10 +11,14 @@ const NAV = [
   { id: 'conversations', icon: '💬', label: 'Conversations' },
 ]
 
+const BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:8000'
+  : window.location.origin
+
 const EXTERNAL = [
-  { icon: '🤖', label: 'Chatbot démo',  href: 'http://localhost:8000/widget/demo.html' },
-  { icon: '🎙️', label: 'Vocal démo',    href: 'http://localhost:8000/widget/voice_demo.html' },
-  { icon: '📋', label: 'API Swagger',   href: 'http://localhost:8000/docs' },
+  { icon: '🤖', label: 'Chatbot démo',  href: `${BASE}/widget/demo.html` },
+  { icon: '🎙️', label: 'Vocal démo',    href: `${BASE}/widget/voice_demo.html` },
+  { icon: '📋', label: 'API Swagger',   href: `${BASE}/docs` },
 ]
 
 function Sidebar({ page, setPage, onLogout }) {
