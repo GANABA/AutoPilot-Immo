@@ -26,27 +26,36 @@ os.makedirs(_TTS_DIR, exist_ok=True)
 def _elevenlabs_tts(text: str) -> str | None:
     """
     Generate speech with ElevenLabs and save to a temp file.
-    Returns the file path, or None if ElevenLabs is not configured.
+    Returns the filename, or None if ElevenLabs is not configured or fails.
     """
-    if not settings.ELEVENLABS_API_KEY or not settings.ELEVENLABS_VOICE_ID:
+    api_key = settings.ELEVENLABS_API_KEY
+    voice_id = settings.ELEVENLABS_VOICE_ID
+    if not api_key:
+        logger.warning("ElevenLabs: ELEVENLABS_API_KEY is not set — falling back to Polly")
         return None
+    if not voice_id:
+        logger.warning("ElevenLabs: ELEVENLABS_VOICE_ID is not set — falling back to Polly")
+        return None
+    logger.info("ElevenLabs: generating TTS (voice=%s, text_len=%d)", voice_id, len(text))
     try:
         from elevenlabs import ElevenLabs
-        client = ElevenLabs(api_key=settings.ELEVENLABS_API_KEY)
+        client = ElevenLabs(api_key=api_key)
         audio_iter = client.text_to_speech.convert(
-            voice_id=settings.ELEVENLABS_VOICE_ID,
+            voice_id=voice_id,
             text=text,
             model_id="eleven_multilingual_v2",
             output_format="mp3_44100_128",
         )
         audio_bytes = b"".join(audio_iter)
+        logger.info("ElevenLabs: generated %d bytes", len(audio_bytes))
         filename = f"{uuid.uuid4().hex}.mp3"
         path = os.path.join(_TTS_DIR, filename)
         with open(path, "wb") as f:
             f.write(audio_bytes)
+        logger.info("ElevenLabs: saved to %s", path)
         return filename
     except Exception as exc:
-        logger.error("ElevenLabs TTS error: %s", exc)
+        logger.error("ElevenLabs TTS error: %s", exc, exc_info=True)
         return None
 
 
@@ -154,6 +163,28 @@ async def voice_chat(
     )
 
 
+# ── ElevenLabs diagnostic endpoint ───────────────────────────────────────────
+
+@router.get("/test-elevenlabs", tags=["voice"])
+async def test_elevenlabs():
+    """Quick diagnostic: checks config and generates a test audio file."""
+    api_key = settings.ELEVENLABS_API_KEY
+    voice_id = settings.ELEVENLABS_VOICE_ID
+    public_url = settings.PUBLIC_URL
+
+    if not api_key:
+        return {"ok": False, "error": "ELEVENLABS_API_KEY not set"}
+    if not voice_id:
+        return {"ok": False, "error": "ELEVENLABS_VOICE_ID not set"}
+
+    filename = await asyncio.to_thread(_elevenlabs_tts, "Bonjour, test ElevenLabs.")
+    if not filename:
+        return {"ok": False, "error": "TTS generation failed — check server logs for details"}
+
+    audio_url = f"{public_url.rstrip('/')}/voice/audio/{filename}"
+    return {"ok": True, "audio_url": audio_url, "voice_id": voice_id}
+
+
 # ── ElevenLabs audio file endpoint ───────────────────────────────────────────
 
 @router.get("/audio/{filename}", include_in_schema=False)
@@ -184,10 +215,7 @@ async def twilio_incoming(request: Request):
         "Comment puis-je vous aider dans votre recherche immobilière ?"
     )
 
-    # Determine public base URL for ElevenLabs audio hosting
-    host = request.headers.get("x-forwarded-host") or request.headers.get("host", "")
-    scheme = "https" if "render.com" in host or "onrender.com" in host else request.url.scheme
-    base_url = f"{scheme}://{host}"
+    base_url = settings.PUBLIC_URL.rstrip("/")
 
     resp = VoiceResponse()
     gather = Gather(
@@ -196,7 +224,6 @@ async def twilio_incoming(request: Request):
         method="POST",
         language="fr-FR",
         speech_timeout="auto",
-        enhanced=True,
     )
 
     # Try ElevenLabs first, fall back to Polly
@@ -207,7 +234,21 @@ async def twilio_incoming(request: Request):
         gather.say(greeting, language="fr-FR", voice="Polly.Lea")
 
     resp.append(gather)
-    resp.say("Je n'ai pas entendu votre réponse. Au revoir.", language="fr-FR")
+    # Retry once instead of hanging up
+    retry_gather = Gather(
+        input="speech",
+        action="/voice/twilio/gather",
+        method="POST",
+        language="fr-FR",
+        speech_timeout="auto",
+    )
+    retry_gather.say(
+        "Je n'ai pas entendu votre réponse. Pouvez-vous répéter votre demande ?",
+        language="fr-FR",
+        voice="Polly.Lea",
+    )
+    resp.append(retry_gather)
+    resp.say("Merci d'avoir appelé ImmoPlus. Au revoir !", language="fr-FR")
 
     return Response(content=str(resp), media_type="application/xml")
 
@@ -266,10 +307,7 @@ async def twilio_gather(request: Request):
     finally:
         db.close()
 
-    # Determine public base URL
-    host = request.headers.get("x-forwarded-host") or request.headers.get("host", "")
-    scheme = "https" if "render.com" in host or "onrender.com" in host else request.url.scheme
-    base_url = f"{scheme}://{host}"
+    base_url = settings.PUBLIC_URL.rstrip("/")
 
     # Respond and gather next turn
     gather = Gather(
