@@ -131,6 +131,35 @@
       messagesEl.scrollTop = messagesEl.scrollHeight;
     }
 
+    function appendPropertyCards(items) {
+      removeTyping();
+      if (!items || items.length === 0) return;
+      const wrapper = document.createElement("div");
+      wrapper.className = "ap-property-cards";
+      items.slice(0, 3).forEach(p => {
+        const fmt = (n) => n ? Number(n).toLocaleString("fr-FR") + " €" : "";
+        const card = document.createElement("div");
+        card.className = "ap-prop-card";
+        card.innerHTML = `
+          <img class="ap-prop-img" src="${p.image}" alt="${p.title}" loading="lazy" />
+          <div class="ap-prop-body">
+            <div class="ap-prop-price">${fmt(p.price)}</div>
+            <div class="ap-prop-title">${p.title}</div>
+            <div class="ap-prop-location">📍 ${p.city}${p.zipcode ? " · " + p.zipcode : ""}</div>
+            <div class="ap-prop-specs">
+              <span>📐 ${p.surface} m²</span>
+              <span>🚪 ${p.nb_rooms} p.</span>
+              ${p.has_parking ? "<span>🅿️</span>" : ""}
+              ${p.has_balcony ? "<span>🌿</span>" : ""}
+              ${p.energy_class ? "<span>⚡ " + p.energy_class + "</span>" : ""}
+            </div>
+          </div>`;
+        wrapper.appendChild(card);
+      });
+      messagesEl.appendChild(wrapper);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
     function showTyping() {
       if (typingEl) return;
       typingEl = document.createElement("div");
@@ -183,6 +212,8 @@
         const msg = JSON.parse(event.data);
         if (msg.type === "typing") {
           showTyping();
+        } else if (msg.type === "properties") {
+          appendPropertyCards(msg.items);
         } else if (msg.type === "assistant") {
           appendMessage("assistant", msg.content);
         } else if (msg.type === "error") {
@@ -236,6 +267,7 @@
           setInputEnabled(true);
           inputEl.focus();
         }
+        // properties cards don't re-enable input (assistant message follows)
       };
     }
 

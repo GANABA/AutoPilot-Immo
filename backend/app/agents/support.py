@@ -26,6 +26,7 @@ class SupportState(TypedDict):
     history: list[dict]         # [{role, content}] — last N turns
     criteria: dict              # extracted search filters
     properties_context: str     # formatted property list for the LLM
+    matched_properties: list    # raw Property objects for card rendering
     response: str               # final assistant response
 
 
@@ -111,7 +112,7 @@ class SupportAgent(BaseAgent):
             if props
             else "Aucun bien ne correspond exactement à cette recherche dans notre catalogue actuel."
         )
-        return {"properties_context": context}
+        return {"properties_context": context, "matched_properties": props}
 
     def _generate_response(self, state: SupportState) -> dict:
         """Node 3 — generate the final assistant reply."""
@@ -152,11 +153,52 @@ class SupportAgent(BaseAgent):
             "history": input_data.get("history", []),
             "criteria": {},
             "properties_context": "",
+            "matched_properties": [],
             "response": "",
         }
         result = self._graph.invoke(state)
+
+        # Serialize matched properties for WebSocket transmission
+        _IMAGES = {
+            "appartement": [
+                "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400&q=80",
+                "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=400&q=80",
+                "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400&q=80",
+                "https://images.unsplash.com/photo-1484154218962-a197022b5858?w=400&q=80",
+            ],
+            "maison": [
+                "https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=400&q=80",
+                "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=400&q=80",
+                "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80",
+            ],
+        }
+        _DEFAULT_IMG = "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=400&q=80"
+
+        def _img(prop, idx):
+            imgs = _IMAGES.get(getattr(prop, "type", ""), [_DEFAULT_IMG])
+            return imgs[idx % len(imgs)]
+
+        cards = [
+            {
+                "id": str(p.id),
+                "title": p.title,
+                "price": p.price,
+                "surface": p.surface,
+                "nb_rooms": p.nb_rooms,
+                "city": p.city,
+                "zipcode": p.zipcode or "",
+                "type": getattr(p, "type", "bien"),
+                "image": _img(p, i),
+                "has_parking": getattr(p, "has_parking", False),
+                "has_balcony": getattr(p, "has_balcony", False),
+                "energy_class": getattr(p, "energy_class", None),
+            }
+            for i, p in enumerate(result.get("matched_properties", []))
+        ]
+
         return {
             "response": result["response"],
             "properties_context": result["properties_context"],
             "criteria": result["criteria"],
+            "property_cards": cards,
         }

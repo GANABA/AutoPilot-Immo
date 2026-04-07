@@ -261,6 +261,77 @@
   fill: white;
 }
 
+/* ── Property cards in chat ─────────────────────────────────────────── */
+.ap-property-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-self: flex-start;
+  width: 100%;
+  max-width: 300px;
+  animation: ap-fadeIn 0.2s ease;
+}
+
+.ap-prop-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.ap-prop-card:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  transform: translateY(-2px);
+}
+
+.ap-prop-img {
+  width: 100%;
+  height: 110px;
+  object-fit: cover;
+  display: block;
+}
+
+.ap-prop-body {
+  padding: 10px 12px;
+}
+
+.ap-prop-price {
+  font-size: 15px;
+  font-weight: 800;
+  color: #1d4ed8;
+  letter-spacing: -0.3px;
+}
+
+.ap-prop-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 3px 0 2px;
+  line-height: 1.3;
+}
+
+.ap-prop-location {
+  font-size: 11px;
+  color: #64748b;
+  margin-bottom: 6px;
+}
+
+.ap-prop-specs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ap-prop-specs span {
+  font-size: 11px;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 2px 7px;
+  border-radius: 100px;
+}
+
 @media (max-width: 420px) {
   #ap-chat-panel {
     width: calc(100vw - 24px);

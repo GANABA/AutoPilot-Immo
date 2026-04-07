@@ -149,9 +149,11 @@ async def chat_websocket(websocket: WebSocket, conversation_id: UUID):
                     db,
                 )
                 response_text = result["response"]
+                property_cards = result.get("property_cards", [])
             except Exception as exc:
                 logger.error("SupportAgent error: %s", exc, exc_info=True)
                 response_text = "Désolé, une erreur s'est produite. Veuillez réessayer."
+                property_cards = []
 
             # Persist assistant reply
             db.add(Message(
@@ -160,6 +162,10 @@ async def chat_websocket(websocket: WebSocket, conversation_id: UUID):
                 content=response_text,
             ))
             db.commit()
+
+            # Send property cards before text (only when properties were found)
+            if property_cards:
+                await websocket.send_json({"type": "properties", "items": property_cards})
 
             await websocket.send_json({"type": "assistant", "content": response_text})
 
