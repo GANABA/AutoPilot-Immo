@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { MessageSquare, User } from 'lucide-react'
 import { getConversations, getMessages } from '../api/client'
 
 const STATUS_BADGE = {
@@ -59,7 +60,7 @@ export default function ConversationsPage() {
           ) : conversations.length === 0 ? (
             <div className="text-slate-400 text-sm text-center py-8">
               Aucune conversation.<br />
-              <a href="http://localhost:8000/widget/demo.html" target="_blank" rel="noreferrer"
+              <a href="../widget/demo.html" target="_blank" rel="noreferrer"
                 className="text-blue-500 hover:underline">Ouvrir le chatbot</a>
             </div>
           ) : conversations.map(c => (
@@ -132,7 +133,7 @@ export default function ConversationsPage() {
       ) : (
         <div className="flex-1 flex items-center justify-center text-slate-400">
           <div className="text-center">
-            <div className="text-4xl mb-3">💬</div>
+            <MessageSquare size={40} className="mx-auto mb-3 text-slate-200" />
             <p className="text-sm">Sélectionnez une conversation</p>
           </div>
         </div>

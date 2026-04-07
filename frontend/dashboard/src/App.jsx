@@ -1,4 +1,8 @@
 import { useState } from 'react'
+import {
+  LayoutDashboard, Building2, MessageSquare,
+  Bot, Mic, FileCode2, ExternalLink, LogOut, Home, Circle
+} from 'lucide-react'
 import { clearToken, getToken } from './api/client'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
@@ -6,9 +10,9 @@ import PropertiesPage from './pages/PropertiesPage'
 import ConversationsPage from './pages/ConversationsPage'
 
 const NAV = [
-  { id: 'dashboard',     icon: '📊', label: 'Tableau de bord' },
-  { id: 'properties',    icon: '🏠', label: 'Biens' },
-  { id: 'conversations', icon: '💬', label: 'Conversations' },
+  { id: 'dashboard',     icon: LayoutDashboard, label: 'Tableau de bord' },
+  { id: 'properties',    icon: Building2,        label: 'Biens' },
+  { id: 'conversations', icon: MessageSquare,    label: 'Conversations' },
 ]
 
 const BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
@@ -16,9 +20,9 @@ const BASE = window.location.hostname === 'localhost' || window.location.hostnam
   : window.location.origin
 
 const EXTERNAL = [
-  { icon: '🤖', label: 'Chatbot démo',  href: `${BASE}/widget/demo.html` },
-  { icon: '🎙️', label: 'Vocal démo',    href: `${BASE}/widget/voice_demo.html` },
-  { icon: '📋', label: 'API Swagger',   href: `${BASE}/docs` },
+  { icon: Bot,       label: 'Chatbot démo',  href: `${BASE}/widget/demo.html` },
+  { icon: Mic,       label: 'Vocal démo',    href: `${BASE}/widget/voice_demo.html` },
+  { icon: FileCode2, label: 'API Swagger',   href: `${BASE}/docs` },
 ]
 
 function Sidebar({ page, setPage, onLogout }) {
@@ -27,7 +31,9 @@ function Sidebar({ page, setPage, onLogout }) {
       {/* Logo */}
       <div className="px-5 py-5 border-b border-slate-800">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center text-lg">🏠</div>
+          <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center">
+            <Home size={18} className="text-white" />
+          </div>
           <div>
             <div className="text-white font-extrabold text-sm tracking-tight">AutoPilot Immo</div>
             <div className="text-slate-500 text-xs">Dashboard agence</div>
@@ -38,51 +44,51 @@ function Sidebar({ page, setPage, onLogout }) {
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5">
         <div className="text-xs font-semibold text-slate-600 uppercase tracking-wider px-3 mb-2">Navigation</div>
-        {NAV.map(item => (
+        {NAV.map(({ id, icon: Icon, label }) => (
           <button
-            key={item.id}
-            onClick={() => setPage(item.id)}
+            key={id}
+            onClick={() => setPage(id)}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-              page === item.id
+              page === id
                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/30'
                 : 'text-slate-400 hover:bg-slate-800 hover:text-white'
             }`}
           >
-            <span className="text-base">{item.icon}</span>
-            {item.label}
+            <Icon size={16} />
+            {label}
           </button>
         ))}
 
         <div className="pt-5">
           <div className="text-xs font-semibold text-slate-600 uppercase tracking-wider px-3 mb-2">Outils</div>
-          {EXTERNAL.map(item => (
+          {EXTERNAL.map(({ icon: Icon, label, href }) => (
             <a
-              key={item.label}
-              href={item.href}
+              key={label}
+              href={href}
               target="_blank"
               rel="noreferrer"
               className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-400 hover:bg-slate-800 hover:text-white transition-all"
             >
-              <span className="text-base">{item.icon}</span>
-              <span>{item.label}</span>
-              <span className="ml-auto text-slate-600 text-xs">↗</span>
+              <Icon size={16} />
+              <span className="flex-1">{label}</span>
+              <ExternalLink size={12} className="text-slate-600" />
             </a>
           ))}
         </div>
       </nav>
 
       {/* Status */}
-      <div className="px-5 py-3 mx-3 mb-3 bg-slate-900 rounded-xl">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse flex-shrink-0"></span>
+      <div className="px-3 mb-3">
+        <div className="px-3 py-2.5 bg-slate-900 rounded-xl flex items-center gap-2">
+          <Circle size={8} className="text-green-500 fill-green-500 flex-shrink-0" />
           <span className="text-xs text-slate-400">4 agents IA opérationnels</span>
         </div>
       </div>
 
       {/* User */}
       <div className="p-3 border-t border-slate-800">
-        <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl mb-1">
-          <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">A</div>
+        <div className="flex items-center gap-3 px-3 py-2 mb-1">
+          <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">A</div>
           <div className="flex-1 min-w-0">
             <div className="text-white text-xs font-semibold truncate">Admin</div>
             <div className="text-slate-500 text-xs truncate">admin@immoplus.fr</div>
@@ -92,7 +98,7 @@ function Sidebar({ page, setPage, onLogout }) {
           onClick={onLogout}
           className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-slate-500 hover:bg-slate-800 hover:text-red-400 transition-colors"
         >
-          <span>🚪</span>
+          <LogOut size={15} />
           Déconnexion
         </button>
       </div>
@@ -104,10 +110,7 @@ export default function App() {
   const [authed, setAuthed] = useState(!!getToken())
   const [page, setPage] = useState('dashboard')
 
-  const handleLogout = () => {
-    clearToken()
-    setAuthed(false)
-  }
+  const handleLogout = () => { clearToken(); setAuthed(false) }
 
   if (!authed) return <LoginPage onLogin={() => setAuthed(true)} />
 
@@ -120,9 +123,7 @@ export default function App() {
   return (
     <div className="flex min-h-screen bg-slate-50">
       <Sidebar page={page} setPage={setPage} onLogout={handleLogout} />
-      <main className="flex-1 p-8 overflow-auto">
-        {PAGES[page]}
-      </main>
+      <main className="flex-1 p-8 overflow-auto">{PAGES[page]}</main>
     </div>
   )
 }

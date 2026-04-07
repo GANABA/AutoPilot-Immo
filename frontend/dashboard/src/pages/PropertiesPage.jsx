@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Search, Sparkles, Paperclip, Check, ChevronRight } from 'lucide-react'
 import {
   generateListings, getDocuments, getListings, getProperties,
   updateListing, uploadDocument,
@@ -82,7 +83,8 @@ function ListingsTab({ property }) {
           disabled={generating}
           className="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
         >
-          {generating ? '⏳ Génération…' : '✨ Générer les annonces'}
+          <Sparkles size={14} />
+          {generating ? 'Génération…' : 'Générer les annonces'}
         </button>
       </div>
 
@@ -101,9 +103,9 @@ function ListingsTab({ property }) {
                   {l.status === 'draft' && (
                     <button
                       onClick={() => approve(l)}
-                      className="text-xs text-blue-600 hover:underline"
+                      className="text-xs text-blue-600 hover:underline flex items-center gap-1"
                     >
-                      Approuver
+                      <Check size={12} /> Approuver
                     </button>
                   )}
                 </div>
@@ -152,7 +154,8 @@ function DocumentsTab({ property }) {
       <div className="flex items-center justify-between mb-4">
         <span className="text-sm text-slate-500">{docs.length} document(s)</span>
         <label className="bg-slate-700 text-white text-sm px-4 py-2 rounded-lg hover:bg-slate-800 cursor-pointer flex items-center gap-2">
-          {uploading ? '⏳ Analyse…' : '📎 Uploader un PDF'}
+          <Paperclip size={14} />
+          {uploading ? 'Analyse…' : 'Uploader un PDF'}
           <input ref={fileRef} type="file" accept=".pdf" onChange={handleUpload} className="hidden" disabled={uploading} />
         </label>
       </div>
@@ -289,7 +292,7 @@ export default function PropertiesPage() {
       ) : (
         <div className="flex-1 flex items-center justify-center text-slate-400">
           <div className="text-center">
-            <div className="text-4xl mb-3">👈</div>
+            <ChevronRight size={40} className="mx-auto mb-3 text-slate-200" />
             <p className="text-sm">Sélectionnez un bien pour voir le détail</p>
           </div>
         </div>

@@ -1,6 +1,6 @@
 # AutoPilot Immo 🏠
 
-> Système multi-agents IA pour agences immobilières — projet portfolio freelance
+> Système multi-agents IA pour agences immobilières
 
 **AutoPilot Immo** automatise les tâches répétitives d'une agence immobilière grâce à 4 agents IA orchestrés : chatbot RAG 24/7, rédacteur d'annonces, analyste de documents PDF, et assistant vocal téléphonique.
 
@@ -166,5 +166,5 @@ autopilot-immo/
 
 ## Contact
 
-Projet développé par **Rodanim GANABA** — Développeur IA Freelance  
+Développé par **Rodanim GANABA**  
 📧 ganabarodanimkm@gmail.com | 🔗 [LinkedIn](https://www.linkedin.com/in/ganaba-r-melchis%C3%A9dech/) | 🐙 [GitHub](https://github.com/GANABA/AutoPilot-Immo)
