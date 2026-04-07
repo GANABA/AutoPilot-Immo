@@ -10,10 +10,10 @@
 
 | Interface | URL |
 |---|---|
-| Dashboard de gestion | `/dashboard` |
-| Chatbot prospect | `/widget/demo.html` |
-| Assistant vocal | `/widget/voice_demo.html` |
-| API Swagger | `/docs` |
+| Dashboard de gestion | https://autopilot-api-5w5n.onrender.com/dashboard |
+| Chatbot prospect | https://autopilot-api-5w5n.onrender.com/widget/demo.html |
+| Assistant vocal | https://autopilot-api-5w5n.onrender.com/widget/voice_demo.html |
+| API Swagger | https://autopilot-api-5w5n.onrender.com/docs |
 
 ---
 
@@ -97,7 +97,7 @@ Pipeline : `Whisper STT` → `SupportAgent RAG` → `OpenAI TTS-1`
 
 ```bash
 # 1. Cloner et configurer
-git clone https://github.com/TON_GITHUB/autopilot-immo.git
+git clone https://github.com/GANABA/AutoPilot-Immo.git
 cd autopilot-immo
 cp .env.example .env
 # Éditer .env avec votre clé OpenAI
@@ -166,5 +166,5 @@ autopilot-immo/
 
 ## Contact
 
-Projet développé par **[Ton Nom]** — Développeur IA Freelance  
-📧 [ton@email.com] | 🔗 [linkedin.com/in/...] | 🐙 [github.com/...]
+Projet développé par **Rodanim GANABA** — Développeur IA Freelance  
+📧 ganabarodanimkm@gmail.com | 🔗 [LinkedIn](https://www.linkedin.com/in/ganaba-r-melchis%C3%A9dech/) | 🐙 [GitHub](https://github.com/GANABA/AutoPilot-Immo)
