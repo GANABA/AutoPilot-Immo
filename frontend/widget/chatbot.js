@@ -21,6 +21,28 @@
       : window.location.origin);
   const WS_BASE = API_BASE.replace(/^http/, "ws"); // transform http:// to ws:// and https:// to wss://
 
+  // ── Load marked.js for markdown rendering ───────────────────────────────────
+  function loadMarked() {
+    return new Promise((resolve) => {
+      if (window.marked) return resolve();
+      const s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/marked@9/marked.min.js";
+      s.onload = resolve;
+      s.onerror = resolve; // graceful fallback
+      document.head.appendChild(s);
+    });
+  }
+
+  function renderMarkdown(text) {
+    if (window.marked) {
+      try {
+        return window.marked.parse(text, { breaks: true, gfm: true });
+      } catch (_) {}
+    }
+    // Fallback: escape HTML and preserve line breaks
+    return text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>");
+  }
+
   // ── Inject CSS ──────────────────────────────────────────────────────────────
   function injectCSS() {
     if (document.getElementById("ap-widget-css")) return;
@@ -100,7 +122,11 @@
       removeTyping();
       const div = document.createElement("div");
       div.className = "ap-msg ap-" + role;
-      div.textContent = text;
+      if (role === "assistant") {
+        div.innerHTML = renderMarkdown(text);
+      } else {
+        div.textContent = text;
+      }
       messagesEl.appendChild(div);
       messagesEl.scrollTop = messagesEl.scrollHeight;
     }
@@ -235,6 +261,9 @@
     btn.addEventListener("click", () => (isOpen ? closePanel() : openPanel()));
     closeBtn.addEventListener("click", closePanel);
 
+    // Auto-open after 2.5s to greet the visitor
+    setTimeout(() => { if (!isOpen) openPanel(); }, 2500);
+
     // ── Input events ───────────────────────────────────────────────────────
     inputEl.addEventListener("input", () => {
       // Auto-resize textarea
@@ -254,8 +283,8 @@
 
   // Run after DOM ready
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
+    document.addEventListener("DOMContentLoaded", () => loadMarked().then(init));
   } else {
-    init();
+    loadMarked().then(init);
   }
 })();

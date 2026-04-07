@@ -15,6 +15,47 @@ from app.database.models import Tenant
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+
+def _tts_preprocess(text: str) -> str:
+    """Make text more natural for Polly TTS: expand units, format numbers."""
+    import re
+
+    # Currency — before number formatting
+    text = re.sub(r"(\d[\d\s]*)\s*€", lambda m: m.group(1).replace(" ", "") + " euros", text)
+    text = re.sub(r"€\s*(\d[\d\s]*)", lambda m: m.group(1).replace(" ", "") + " euros", text)
+
+    # Surface units
+    text = text.replace("m²", " mètres carrés")
+    text = text.replace("m2", " mètres carrés")
+
+    # Percent
+    text = text.replace("%", " pourcent")
+
+    # Format large numbers with spaces for readability (e.g. 285000 → 285 000)
+    def format_number(m):
+        n = m.group(0)
+        # insert spaces every 3 digits from right
+        result = ""
+        for i, c in enumerate(reversed(n)):
+            if i > 0 and i % 3 == 0:
+                result = " " + result
+            result = c + result
+        return result
+
+    text = re.sub(r"\b\d{4,}\b", format_number, text)
+
+    # Common abbreviations
+    text = text.replace("T1", "T un").replace("T2", "T deux").replace("T3", "T trois")
+    text = text.replace("T4", "T quatre").replace("T5", "T cinq")
+    text = text.replace("DPE", "D P E")
+
+    # Remove markdown symbols that Polly would read
+    text = re.sub(r"\*+", "", text)
+    text = re.sub(r"#+\s*", "", text)
+    text = text.replace("_", " ")
+
+    return text.strip()
+
 MAX_AUDIO_SIZE = 25 * 1024 * 1024  # 25 MB (Whisper limit)
 
 
@@ -180,7 +221,7 @@ async def twilio_gather(request: Request):
         language="fr-FR",
         speech_timeout="auto",
     )
-    gather.say(response_text, language="fr-FR", voice="Polly.Lea")
+    gather.say(_tts_preprocess(response_text), language="fr-FR", voice="Polly.Lea")
     resp.append(gather)
     resp.say("Merci d'avoir appelé ImmoPlus. Au revoir !", language="fr-FR")
 
