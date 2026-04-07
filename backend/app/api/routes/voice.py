@@ -168,21 +168,45 @@ async def voice_chat(
 @router.get("/test-elevenlabs", tags=["voice"])
 async def test_elevenlabs():
     """Quick diagnostic: checks config and generates a test audio file."""
+    import traceback
+
     api_key = settings.ELEVENLABS_API_KEY
     voice_id = settings.ELEVENLABS_VOICE_ID
     public_url = settings.PUBLIC_URL
 
-    if not api_key:
-        return {"ok": False, "error": "ELEVENLABS_API_KEY not set"}
-    if not voice_id:
-        return {"ok": False, "error": "ELEVENLABS_VOICE_ID not set"}
+    info = {
+        "api_key_set": bool(api_key),
+        "api_key_prefix": api_key[:8] + "..." if api_key else None,
+        "voice_id_set": bool(voice_id),
+        "voice_id": voice_id or None,
+        "public_url": public_url,
+        "tts_dir": _TTS_DIR,
+        "tts_dir_exists": os.path.isdir(_TTS_DIR),
+    }
 
-    filename = await asyncio.to_thread(_elevenlabs_tts, "Bonjour, test ElevenLabs.")
+    if not api_key:
+        return {"ok": False, "error": "ELEVENLABS_API_KEY not set", "info": info}
+    if not voice_id:
+        return {"ok": False, "error": "ELEVENLABS_VOICE_ID not set", "info": info}
+
+    # Test elevenlabs import
+    try:
+        from elevenlabs import ElevenLabs as _EL
+        info["elevenlabs_import"] = "ok"
+    except Exception as e:
+        return {"ok": False, "error": f"elevenlabs import failed: {e}", "info": info}
+
+    # Test actual TTS call
+    try:
+        filename = await asyncio.to_thread(_elevenlabs_tts, "Bonjour, test ElevenLabs.")
+    except Exception as e:
+        return {"ok": False, "error": f"asyncio.to_thread failed: {e}\n{traceback.format_exc()}", "info": info}
+
     if not filename:
-        return {"ok": False, "error": "TTS generation failed — check server logs for details"}
+        return {"ok": False, "error": "TTS returned None — check server logs for details", "info": info}
 
     audio_url = f"{public_url.rstrip('/')}/voice/audio/{filename}"
-    return {"ok": True, "audio_url": audio_url, "voice_id": voice_id}
+    return {"ok": True, "audio_url": audio_url, "voice_id": voice_id, "info": info}
 
 
 # ── ElevenLabs audio file endpoint ───────────────────────────────────────────
