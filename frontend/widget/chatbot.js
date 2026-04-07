@@ -75,12 +75,16 @@
     panel.classList.add("ap-hidden");
     panel.innerHTML = `
       <div id="ap-chat-header">
-        <div class="ap-avatar">🏠</div>
+        <div class="ap-avatar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        </div>
         <div class="ap-info">
           <div class="ap-name">Assistant ImmoPlus</div>
           <div class="ap-status"><span class="ap-dot"></span> En ligne</div>
         </div>
-        <button id="ap-chat-close" aria-label="Fermer">✕</button>
+        <button id="ap-chat-close" aria-label="Fermer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" width="16" height="16"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
       </div>
       <div id="ap-messages" role="log" aria-live="polite"></div>
       <div id="ap-chat-footer">

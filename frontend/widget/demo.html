@@ -6,679 +6,148 @@
   <title>ImmoPlus — Agence immobilière Lyon</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
-      --blue: #1d4ed8;
-      --blue-dark: #1e3a8a;
-      --blue-light: #eff6ff;
-      --slate: #1e293b;
-      --muted: #64748b;
-      --border: #e2e8f0;
-      --bg: #f8fafc;
+      --blue: #1d4ed8; --blue-dark: #1e3a8a; --blue-light: #eff6ff;
+      --slate: #1e293b; --muted: #64748b; --border: #e2e8f0; --bg: #f8fafc;
     }
-
-    body {
-      font-family: 'Inter', system-ui, sans-serif;
-      background: var(--bg);
-      color: var(--slate);
-    }
-
+    body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--slate); }
     a { text-decoration: none; color: inherit; }
+    .icon { display: inline-flex; align-items: center; justify-content: center; }
+    .icon svg { width: 1em; height: 1em; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
 
-    /* ── HEADER ─────────────────────────────────────────────────────────── */
-    header {
-      background: white;
-      border-bottom: 1px solid var(--border);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-
-    .header-inner {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 0 24px;
-      height: 68px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .logo-icon {
-      width: 38px;
-      height: 38px;
-      background: var(--blue);
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 20px;
-    }
-
-    .logo-text {
-      font-size: 20px;
-      font-weight: 800;
-      color: var(--slate);
-      letter-spacing: -0.5px;
-    }
-
+    /* HEADER */
+    header { background: white; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+    .header-inner { max-width: 1200px; margin: 0 auto; padding: 0 24px; height: 68px; display: flex; align-items: center; justify-content: space-between; }
+    .logo { display: flex; align-items: center; gap: 10px; }
+    .logo-icon { width: 38px; height: 38px; background: var(--blue); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; }
+    .logo-text { font-size: 20px; font-weight: 800; color: var(--slate); letter-spacing: -0.5px; }
     .logo-text span { color: var(--blue); }
-
     nav { display: flex; align-items: center; gap: 28px; }
-
-    nav a {
-      font-size: 14px;
-      font-weight: 500;
-      color: var(--muted);
-      transition: color 0.15s;
-    }
-
+    nav a { font-size: 14px; font-weight: 500; color: var(--muted); transition: color 0.15s; }
     nav a:hover { color: var(--slate); }
-
-    .btn-primary {
-      background: var(--blue);
-      color: white;
-      padding: 9px 20px;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 600;
-      border: none;
-      cursor: pointer;
-      transition: background 0.15s;
-    }
-
+    .btn-primary { background: var(--blue); color: white; padding: 9px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; transition: background 0.15s; display: inline-flex; align-items: center; gap: 7px; }
     .btn-primary:hover { background: var(--blue-dark); }
 
-    /* ── HERO ───────────────────────────────────────────────────────────── */
-    .hero {
-      position: relative;
-      height: 580px;
-      overflow: hidden;
-    }
-
-    .hero-bg {
-      position: absolute;
-      inset: 0;
-      background-image: url('https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=1600&q=80');
-      background-size: cover;
-      background-position: center;
-      filter: brightness(0.45);
-    }
-
-    .hero-content {
-      position: relative;
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 0 24px;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-    }
-
-    .hero-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(255,255,255,0.15);
-      border: 1px solid rgba(255,255,255,0.25);
-      color: white;
-      padding: 6px 14px;
-      border-radius: 100px;
-      font-size: 13px;
-      font-weight: 500;
-      margin-bottom: 24px;
-      width: fit-content;
-      backdrop-filter: blur(4px);
-    }
-
-    .hero h1 {
-      font-size: clamp(32px, 5vw, 56px);
-      font-weight: 800;
-      color: white;
-      line-height: 1.15;
-      letter-spacing: -1px;
-      max-width: 640px;
-      margin-bottom: 20px;
-    }
-
+    /* HERO */
+    .hero { position: relative; height: 580px; overflow: hidden; }
+    .hero-bg { position: absolute; inset: 0; background-image: url('https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=1600&q=80'); background-size: cover; background-position: center; filter: brightness(0.45); }
+    .hero-content { position: relative; max-width: 1200px; margin: 0 auto; padding: 0 24px; height: 100%; display: flex; flex-direction: column; justify-content: center; }
+    .hero-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25); color: white; padding: 6px 14px; border-radius: 100px; font-size: 13px; font-weight: 500; margin-bottom: 24px; width: fit-content; backdrop-filter: blur(4px); }
+    .hero h1 { font-size: clamp(32px, 5vw, 56px); font-weight: 800; color: white; line-height: 1.15; letter-spacing: -1px; max-width: 640px; margin-bottom: 20px; }
     .hero h1 span { color: #93c5fd; }
-
-    .hero p {
-      font-size: 18px;
-      color: rgba(255,255,255,0.8);
-      max-width: 480px;
-      line-height: 1.6;
-      margin-bottom: 36px;
-    }
-
+    .hero p { font-size: 18px; color: rgba(255,255,255,0.8); max-width: 480px; line-height: 1.6; margin-bottom: 36px; }
     .hero-actions { display: flex; gap: 14px; flex-wrap: wrap; }
-
-    .btn-hero {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 14px 28px;
-      border-radius: 10px;
-      font-size: 15px;
-      font-weight: 600;
-      cursor: pointer;
-      border: none;
-      transition: all 0.15s;
-    }
-
-    .btn-hero-primary {
-      background: var(--blue);
-      color: white;
-      box-shadow: 0 4px 20px rgba(29,78,216,0.5);
-    }
-
+    .btn-hero { display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; }
+    .btn-hero-primary { background: var(--blue); color: white; box-shadow: 0 4px 20px rgba(29,78,216,0.5); }
     .btn-hero-primary:hover { background: #2563eb; transform: translateY(-1px); }
-
-    .btn-hero-secondary {
-      background: rgba(255,255,255,0.15);
-      color: white;
-      border: 1.5px solid rgba(255,255,255,0.4);
-      backdrop-filter: blur(4px);
-    }
-
+    .btn-hero-secondary { background: rgba(255,255,255,0.15); color: white; border: 1.5px solid rgba(255,255,255,0.4); backdrop-filter: blur(4px); }
     .btn-hero-secondary:hover { background: rgba(255,255,255,0.25); }
-
-    .hero-stats {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: rgba(15,23,42,0.7);
-      backdrop-filter: blur(12px);
-      border-top: 1px solid rgba(255,255,255,0.1);
-    }
-
-    .hero-stats-inner {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 20px 24px;
-      display: flex;
-      gap: 48px;
-    }
-
+    .hero-stats { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(15,23,42,0.7); backdrop-filter: blur(12px); border-top: 1px solid rgba(255,255,255,0.1); }
+    .hero-stats-inner { max-width: 1200px; margin: 0 auto; padding: 20px 24px; display: flex; gap: 48px; }
     .stat { color: white; }
     .stat-value { font-size: 24px; font-weight: 800; }
     .stat-label { font-size: 13px; color: rgba(255,255,255,0.6); margin-top: 2px; }
 
-    /* ── SEARCH BAR ─────────────────────────────────────────────────────── */
-    .search-section {
-      background: white;
-      border-bottom: 1px solid var(--border);
-      padding: 20px 24px;
-    }
-
-    .search-inner {
-      max-width: 1200px;
-      margin: 0 auto;
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-
-    .search-inner select, .search-inner input {
-      padding: 10px 14px;
-      border: 1.5px solid var(--border);
-      border-radius: 8px;
-      font-size: 14px;
-      color: var(--slate);
-      background: white;
-      outline: none;
-      font-family: inherit;
-    }
-
-    .search-inner select:focus, .search-inner input:focus {
-      border-color: var(--blue);
-    }
-
+    /* SEARCH */
+    .search-section { background: white; border-bottom: 1px solid var(--border); padding: 20px 24px; }
+    .search-inner { max-width: 1200px; margin: 0 auto; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .search-inner select, .search-inner input { padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 14px; color: var(--slate); background: white; outline: none; font-family: inherit; }
+    .search-inner select:focus, .search-inner input:focus { border-color: var(--blue); }
     .search-inner input { flex: 1; min-width: 200px; }
 
-    /* ── SECTIONS ───────────────────────────────────────────────────────── */
-    .section {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 64px 24px;
-    }
+    /* SECTIONS */
+    .section { max-width: 1200px; margin: 0 auto; padding: 64px 24px; }
+    .section-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 32px; }
+    .section-title { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; }
+    .section-sub { font-size: 14px; color: var(--muted); margin-top: 4px; }
+    .see-all { font-size: 14px; font-weight: 600; color: var(--blue); display: flex; align-items: center; gap: 4px; }
 
-    .section-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-      margin-bottom: 32px;
-    }
-
-    .section-title {
-      font-size: 26px;
-      font-weight: 800;
-      letter-spacing: -0.5px;
-    }
-
-    .section-sub {
-      font-size: 14px;
-      color: var(--muted);
-      margin-top: 4px;
-    }
-
-    .see-all {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--blue);
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    /* ── PROPERTY CARDS ─────────────────────────────────────────────────── */
-    .properties-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-      gap: 24px;
-    }
-
-    .property-card {
-      background: white;
-      border-radius: 16px;
-      overflow: hidden;
-      border: 1px solid var(--border);
-      transition: transform 0.2s, box-shadow 0.2s;
-      cursor: pointer;
-    }
-
-    .property-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 12px 40px rgba(0,0,0,0.12);
-    }
-
-    .property-img {
-      position: relative;
-      height: 210px;
-      overflow: hidden;
-    }
-
-    .property-img img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      transition: transform 0.4s;
-    }
-
+    /* PROPERTY CARDS */
+    .properties-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 24px; }
+    .property-card { background: white; border-radius: 16px; overflow: hidden; border: 1px solid var(--border); transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; }
+    .property-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.12); }
+    .property-img { position: relative; height: 210px; overflow: hidden; }
+    .property-img img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s; }
     .property-card:hover .property-img img { transform: scale(1.04); }
-
-    .property-badge {
-      position: absolute;
-      top: 12px;
-      left: 12px;
-      background: var(--blue);
-      color: white;
-      font-size: 11px;
-      font-weight: 700;
-      padding: 4px 10px;
-      border-radius: 6px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
+    .property-badge { position: absolute; top: 12px; left: 12px; background: var(--blue); color: white; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
     .property-badge.new { background: #059669; }
     .property-badge.exclusive { background: #7c3aed; }
-
-    .property-like {
-      position: absolute;
-      top: 12px;
-      right: 12px;
-      width: 32px;
-      height: 32px;
-      background: white;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 15px;
-      cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-    }
-
+    .property-save { position: absolute; top: 12px; right: 12px; width: 32px; height: 32px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--muted); box-shadow: 0 2px 8px rgba(0,0,0,0.15); cursor: pointer; font-size: 15px; border: none; }
     .property-body { padding: 18px; }
+    .property-price { font-size: 22px; font-weight: 800; color: var(--blue); letter-spacing: -0.5px; }
+    .property-title { font-size: 15px; font-weight: 600; color: var(--slate); margin: 6px 0; line-height: 1.4; }
+    .property-location { display: flex; align-items: center; gap: 5px; font-size: 13px; color: var(--muted); margin-bottom: 14px; }
+    .property-specs { display: flex; gap: 14px; padding-top: 14px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+    .spec { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); }
 
-    .property-price {
-      font-size: 22px;
-      font-weight: 800;
-      color: var(--blue);
-      letter-spacing: -0.5px;
-    }
-
-    .property-title {
-      font-size: 15px;
-      font-weight: 600;
-      color: var(--slate);
-      margin: 6px 0;
-      line-height: 1.4;
-    }
-
-    .property-location {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      font-size: 13px;
-      color: var(--muted);
-      margin-bottom: 14px;
-    }
-
-    .property-specs {
-      display: flex;
-      gap: 16px;
-      padding-top: 14px;
-      border-top: 1px solid var(--border);
-    }
-
-    .spec {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      font-size: 13px;
-      color: var(--muted);
-    }
-
-    .spec-icon { font-size: 15px; }
-
-    /* ── FEATURES SECTION ───────────────────────────────────────────────── */
-    .features-section {
-      background: var(--blue-dark);
-      padding: 72px 24px;
-    }
-
-    .features-inner {
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-
-    .features-top {
-      text-align: center;
-      margin-bottom: 52px;
-    }
-
-    .features-top h2 {
-      font-size: 34px;
-      font-weight: 800;
-      color: white;
-      letter-spacing: -0.5px;
-    }
-
-    .features-top p {
-      font-size: 16px;
-      color: rgba(255,255,255,0.6);
-      margin-top: 10px;
-    }
-
-    .features-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 24px;
-    }
-
-    .feature-card {
-      background: rgba(255,255,255,0.07);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 16px;
-      padding: 28px 24px;
-      transition: background 0.2s;
-    }
-
+    /* FEATURES */
+    .features-section { background: var(--blue-dark); padding: 72px 24px; }
+    .features-inner { max-width: 1200px; margin: 0 auto; }
+    .features-top { text-align: center; margin-bottom: 52px; }
+    .features-top h2 { font-size: 34px; font-weight: 800; color: white; letter-spacing: -0.5px; }
+    .features-top p { font-size: 16px; color: rgba(255,255,255,0.6); margin-top: 10px; }
+    .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; }
+    .feature-card { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 28px 24px; transition: background 0.2s; }
     .feature-card:hover { background: rgba(255,255,255,0.12); }
-
-    .feature-icon {
-      width: 48px;
-      height: 48px;
-      background: rgba(255,255,255,0.1);
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 22px;
-      margin-bottom: 16px;
-    }
-
+    .feature-icon { width: 48px; height: 48px; background: rgba(255,255,255,0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; margin-bottom: 16px; }
     .feature-card h3 { font-size: 16px; font-weight: 700; color: white; margin-bottom: 8px; }
     .feature-card p { font-size: 14px; color: rgba(255,255,255,0.6); line-height: 1.6; }
 
-    /* ── AI SECTION ─────────────────────────────────────────────────────── */
-    .ai-section {
-      background: white;
-      padding: 72px 24px;
-    }
-
-    .ai-inner {
-      max-width: 1200px;
-      margin: 0 auto;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 64px;
-      align-items: center;
-    }
-
-    .ai-text h2 {
-      font-size: 34px;
-      font-weight: 800;
-      letter-spacing: -0.5px;
-      margin-bottom: 16px;
-      line-height: 1.2;
-    }
-
+    /* AI SECTION */
+    .ai-section { background: white; padding: 72px 24px; }
+    .ai-inner { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center; }
+    .ai-text h2 { font-size: 34px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 16px; line-height: 1.2; }
     .ai-text h2 span { color: var(--blue); }
-
-    .ai-text p {
-      font-size: 15px;
-      color: var(--muted);
-      line-height: 1.7;
-      margin-bottom: 28px;
-    }
-
+    .ai-text p { font-size: 15px; color: var(--muted); line-height: 1.7; margin-bottom: 28px; }
     .ai-points { list-style: none; display: flex; flex-direction: column; gap: 12px; }
-
-    .ai-points li {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      font-size: 14px;
-      color: var(--slate);
-    }
-
-    .ai-points li::before {
-      content: "✓";
-      background: #dcfce7;
-      color: #15803d;
-      width: 22px;
-      height: 22px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 12px;
-      font-weight: 700;
-      flex-shrink: 0;
-      margin-top: 1px;
-    }
-
-    .ai-visual {
-      background: var(--blue-light);
-      border-radius: 20px;
-      padding: 32px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    .chat-preview {
-      background: white;
-      border-radius: 12px;
-      padding: 16px;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-    }
-
-    .chat-msg {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 12px;
-    }
-
+    .ai-points li { display: flex; align-items: flex-start; gap: 12px; font-size: 14px; color: var(--slate); }
+    .ai-check { width: 22px; height: 22px; background: #dcfce7; color: #15803d; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+    .ai-visual { background: var(--blue-light); border-radius: 20px; padding: 32px; display: flex; flex-direction: column; gap: 16px; }
+    .chat-preview { background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+    .chat-msg { display: flex; gap: 10px; margin-bottom: 12px; }
     .chat-msg:last-child { margin-bottom: 0; }
+    .chat-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--blue); display: flex; align-items: center; justify-content: center; color: white; flex-shrink: 0; }
+    .chat-bubble { background: #f1f5f9; padding: 10px 14px; border-radius: 12px; border-bottom-left-radius: 4px; font-size: 13px; line-height: 1.5; color: var(--slate); max-width: 280px; }
+    .chat-bubble.user { background: var(--blue); color: white; border-radius: 12px; border-bottom-right-radius: 4px; margin-left: auto; }
 
-    .chat-avatar {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      background: var(--blue);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      flex-shrink: 0;
-    }
-
-    .chat-bubble {
-      background: #f1f5f9;
-      padding: 10px 14px;
-      border-radius: 12px;
-      border-bottom-left-radius: 4px;
-      font-size: 13px;
-      line-height: 1.5;
-      color: var(--slate);
-      max-width: 280px;
-    }
-
-    .chat-bubble.user-bubble {
-      background: var(--blue);
-      color: white;
-      border-radius: 12px;
-      border-bottom-right-radius: 4px;
-      margin-left: auto;
-    }
-
-    /* ── TESTIMONIALS ───────────────────────────────────────────────────── */
+    /* TESTIMONIALS */
     .testimonials-section { padding: 72px 24px; }
-
-    .testimonials-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 24px;
-    }
-
-    .testimonial {
-      background: white;
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 28px;
-    }
-
-    .stars { color: #f59e0b; font-size: 15px; letter-spacing: 2px; margin-bottom: 14px; }
-
-    .testimonial p {
-      font-size: 14px;
-      line-height: 1.7;
-      color: var(--muted);
-      margin-bottom: 20px;
-    }
-
+    .testimonials-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
+    .testimonial { background: white; border: 1px solid var(--border); border-radius: 16px; padding: 28px; }
+    .stars { display: flex; gap: 3px; color: #f59e0b; margin-bottom: 14px; }
+    .testimonial p { font-size: 14px; line-height: 1.7; color: var(--muted); margin-bottom: 20px; font-style: italic; }
     .testimonial-author { display: flex; align-items: center; gap: 12px; }
-
-    .author-avatar {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      object-fit: cover;
-    }
-
+    .author-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
     .author-name { font-size: 14px; font-weight: 600; }
     .author-role { font-size: 12px; color: var(--muted); }
 
-    /* ── CTA ─────────────────────────────────────────────────────────────── */
-    .cta-section {
-      background: linear-gradient(135deg, var(--blue) 0%, #7c3aed 100%);
-      padding: 80px 24px;
-      text-align: center;
-    }
-
-    .cta-section h2 {
-      font-size: 36px;
-      font-weight: 800;
-      color: white;
-      letter-spacing: -0.5px;
-      margin-bottom: 14px;
-    }
-
-    .cta-section p {
-      font-size: 16px;
-      color: rgba(255,255,255,0.75);
-      margin-bottom: 36px;
-      max-width: 480px;
-      margin-left: auto;
-      margin-right: auto;
-    }
-
-    .btn-cta {
-      background: white;
-      color: var(--blue);
-      padding: 16px 36px;
-      border-radius: 12px;
-      font-size: 16px;
-      font-weight: 700;
-      border: none;
-      cursor: pointer;
-      transition: transform 0.15s, box-shadow 0.15s;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-    }
-
+    /* CTA */
+    .cta-section { background: linear-gradient(135deg, var(--blue) 0%, #7c3aed 100%); padding: 80px 24px; text-align: center; }
+    .cta-section h2 { font-size: 36px; font-weight: 800; color: white; letter-spacing: -0.5px; margin-bottom: 14px; }
+    .cta-section p { font-size: 16px; color: rgba(255,255,255,0.75); margin-bottom: 36px; max-width: 480px; margin-left: auto; margin-right: auto; }
+    .btn-cta { background: white; color: var(--blue); padding: 16px 36px; border-radius: 12px; font-size: 16px; font-weight: 700; border: none; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; box-shadow: 0 4px 20px rgba(0,0,0,0.2); display: inline-flex; align-items: center; gap: 8px; }
     .btn-cta:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,0,0,0.25); }
 
-    /* ── FOOTER ─────────────────────────────────────────────────────────── */
-    footer {
-      background: #0f172a;
-      color: rgba(255,255,255,0.5);
-      padding: 40px 24px;
-    }
-
-    .footer-inner {
-      max-width: 1200px;
-      margin: 0 auto;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 16px;
-    }
-
+    /* FOOTER */
+    footer { background: #0f172a; color: rgba(255,255,255,0.5); padding: 40px 24px; }
+    .footer-inner { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
     .footer-logo { font-size: 18px; font-weight: 800; color: white; }
     .footer-logo span { color: #93c5fd; }
     footer p { font-size: 13px; }
 
-    /* ── RESPONSIVE ─────────────────────────────────────────────────────── */
-    @media (max-width: 768px) {
-      nav { display: none; }
-      .ai-inner { grid-template-columns: 1fr; }
-      .hero-stats-inner { gap: 24px; }
-    }
+    @media (max-width: 768px) { nav { display: none; } .ai-inner { grid-template-columns: 1fr; } .hero-stats-inner { gap: 24px; flex-wrap: wrap; } }
   </style>
 </head>
 <body>
 
-<!-- ── HEADER ──────────────────────────────────────────────────────────── -->
+<!-- HEADER -->
 <header>
   <div class="header-inner">
     <div class="logo">
-      <div class="logo-icon">🏠</div>
+      <div class="logo-icon"><i data-lucide="home"></i></div>
       <div class="logo-text">Immo<span>Plus</span></div>
     </div>
     <nav>
@@ -686,109 +155,83 @@
       <a href="#">Louer</a>
       <a href="#">Estimer</a>
       <a href="#">L'agence</a>
-      <a href="#">Blog</a>
     </nav>
     <button class="btn-primary" onclick="document.getElementById('ap-widget-btn').click()">
-      💬 Contacter un conseiller
+      <i data-lucide="message-circle"></i> Contacter un conseiller
     </button>
   </div>
 </header>
 
-<!-- ── HERO ────────────────────────────────────────────────────────────── -->
+<!-- HERO -->
 <section class="hero">
   <div class="hero-bg"></div>
   <div class="hero-content">
     <div class="hero-badge">
-      🤖 Assistant IA disponible 24h/24
+      <i data-lucide="bot" style="width:14px;height:14px;stroke:white;fill:none;"></i>
+      Assistant IA disponible 24h/24
     </div>
     <h1>Trouvez votre bien idéal à <span>Lyon</span></h1>
-    <p>Plus de 200 biens sélectionnés par nos experts. Notre IA vous accompagne dans votre recherche pour trouver exactement ce que vous cherchez.</p>
+    <p>Plus de 200 biens sélectionnés par nos experts. Notre IA vous accompagne dans votre recherche.</p>
     <div class="hero-actions">
       <button class="btn-hero btn-hero-primary" onclick="document.getElementById('ap-widget-btn').click()">
-        💬 Parler à l'assistant IA
+        <i data-lucide="message-circle" style="width:18px;height:18px;stroke:white;fill:none;"></i>
+        Parler à l'assistant IA
       </button>
       <button class="btn-hero btn-hero-secondary">
-        🔍 Voir tous les biens
+        <i data-lucide="search" style="width:18px;height:18px;stroke:white;fill:none;"></i>
+        Voir tous les biens
       </button>
     </div>
   </div>
   <div class="hero-stats">
     <div class="hero-stats-inner">
-      <div class="stat">
-        <div class="stat-value">200+</div>
-        <div class="stat-label">Biens disponibles</div>
-      </div>
-      <div class="stat">
-        <div class="stat-value">98%</div>
-        <div class="stat-label">Clients satisfaits</div>
-      </div>
-      <div class="stat">
-        <div class="stat-value">15 ans</div>
-        <div class="stat-label">D'expérience</div>
-      </div>
-      <div class="stat">
-        <div class="stat-value">24h/24</div>
-        <div class="stat-label">Assistant IA</div>
-      </div>
+      <div class="stat"><div class="stat-value">200+</div><div class="stat-label">Biens disponibles</div></div>
+      <div class="stat"><div class="stat-value">98%</div><div class="stat-label">Clients satisfaits</div></div>
+      <div class="stat"><div class="stat-value">15 ans</div><div class="stat-label">D'expérience</div></div>
+      <div class="stat"><div class="stat-value">24h/24</div><div class="stat-label">Assistant IA</div></div>
     </div>
   </div>
 </section>
 
-<!-- ── SEARCH ───────────────────────────────────────────────────────────── -->
+<!-- SEARCH -->
 <div class="search-section">
   <div class="search-inner">
-    <select>
-      <option>Type de bien</option>
-      <option>Appartement</option>
-      <option>Maison</option>
-      <option>Terrain</option>
-    </select>
-    <select>
-      <option>Budget max</option>
-      <option>200 000 €</option>
-      <option>350 000 €</option>
-      <option>500 000 €</option>
-      <option>1 000 000 €</option>
-    </select>
-    <select>
-      <option>Nb de pièces</option>
-      <option>1 pièce</option>
-      <option>2 pièces</option>
-      <option>3 pièces</option>
-      <option>4 pièces +</option>
-    </select>
+    <select><option>Type de bien</option><option>Appartement</option><option>Maison</option><option>Terrain</option></select>
+    <select><option>Budget max</option><option>200 000 €</option><option>350 000 €</option><option>500 000 €</option><option>1 000 000 €</option></select>
+    <select><option>Nb de pièces</option><option>1 pièce</option><option>2 pièces</option><option>3 pièces</option><option>4 pièces +</option></select>
     <input type="text" placeholder="Ville, quartier, code postal…" />
-    <button class="btn-primary">🔍 Rechercher</button>
+    <button class="btn-primary">
+      <i data-lucide="search"></i> Rechercher
+    </button>
   </div>
 </div>
 
-<!-- ── PROPERTIES ───────────────────────────────────────────────────────── -->
+<!-- PROPERTIES -->
 <section class="section">
   <div class="section-header">
     <div>
       <h2 class="section-title">Nos biens en vedette</h2>
       <p class="section-sub">Sélection exclusive mise à jour quotidiennement</p>
     </div>
-    <a href="#" class="see-all">Voir tout →</a>
+    <a href="#" class="see-all">Voir tout <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></a>
   </div>
-
   <div class="properties-grid">
 
     <div class="property-card">
       <div class="property-img">
         <img src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=600&q=80" alt="T3 Lyon 3" loading="lazy" />
         <span class="property-badge new">Nouveau</span>
-        <div class="property-like">🤍</div>
+        <button class="property-save"><i data-lucide="heart" style="width:14px;height:14px;stroke:#94a3b8;fill:none;"></i></button>
       </div>
       <div class="property-body">
         <div class="property-price">285 000 €</div>
         <div class="property-title">Beau T3 lumineux proche métro Garibaldi</div>
-        <div class="property-location">📍 Lyon 3ème · 69003</div>
+        <div class="property-location"><i data-lucide="map-pin" style="width:13px;height:13px;stroke:#64748b;fill:none;"></i> Lyon 3ème · 69003</div>
         <div class="property-specs">
-          <div class="spec"><span class="spec-icon">📐</span> 72 m²</div>
-          <div class="spec"><span class="spec-icon">🚪</span> 3 pièces</div>
-          <div class="spec"><span class="spec-icon">🏢</span> Étage 3</div>
-          <div class="spec"><span class="spec-icon">🅿️</span> Parking</div>
+          <div class="spec"><i data-lucide="ruler" style="width:13px;height:13px;stroke:#94a3b8;fill:none;"></i> 72 m²</div>
+          <div class="spec"><i data-lucide="door-open" style="width:13px;height:13px;stroke:#94a3b8;fill:none;"></i> 3 pièces</div>
+          <div class="spec"><i data-lucide="building-2" style="width:13px;height:13px;stroke:#94a3b8;fill:none;"></i> Étage 3</div>
+          <div class="spec"><i data-lucide="car" style="width:13px;height:13px;stroke:#94a3b8;fill:none;"></i> Parking</div>
         </div>
       </div>
     </div>
@@ -797,17 +240,17 @@
       <div class="property-img">
         <img src="https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=600&q=80" alt="Maison Tassin" loading="lazy" />
         <span class="property-badge exclusive">Exclusivité</span>
-        <div class="property-like">🤍</div>
+        <button class="property-save"><i data-lucide="heart" style="width:14px;height:14px;stroke:#94a3b8;fill:none;"></i></button>
       </div>
       <div class="property-body">
         <div class="property-price">480 000 €</div>
         <div class="property-title">Maison de ville avec jardin et terrasse</div>
-        <div class="property-location">📍 Tassin-la-Demi-Lune · 69160</div>
+        <div class="property-location"><i data-lucide="map-pin" style="width:13px;height:13px;stroke:#64748b;fill:none;"></i> Tassin-la-Demi-Lune · 69160</div>
         <div class="property-specs">
-          <div class="spec"><span class="spec-icon">📐</span> 130 m²</div>
-          <div class="spec"><span class="spec-icon">🚪</span> 5 pièces</div>
-          <div class="spec"><span class="spec-icon">🌿</span> Jardin</div>
-          <div class="spec"><span class="spec-icon">🅿️</span> Garage</div>
+          <div class="spec"><i data-lucide="ruler" style="width:13px;height:13px;stroke:#94a3b8;fill:none;"></i> 130 m²</div>
+          <div class="spec"><i data-lucide="door-open" style="width:13px;height:13px;stroke:#94a3b8;fill:none;"></i> 5 pièces</div>
+          <div class="spec"><i data-lucide="tree-pine" style="width:13px;height:13px;stroke:#94a3b8;fill:none;"></i> Jardin</div>
+          <div class="spec"><i data-lucide="car" style="width:13px;height:13px;stroke:#94a3b8;fill:none;"></i> Garage</div>
         </div>
       </div>
     </div>
@@ -815,18 +258,18 @@
     <div class="property-card">
       <div class="property-img">
         <img src="https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=600&q=80" alt="T4 Confluence" loading="lazy" />
-        <span class="property-badge">Coup de ♥</span>
-        <div class="property-like">🤍</div>
+        <span class="property-badge">Coup de coeur</span>
+        <button class="property-save"><i data-lucide="heart" style="width:14px;height:14px;stroke:#94a3b8;fill:none;"></i></button>
       </div>
       <div class="property-body">
         <div class="property-price">545 000 €</div>
         <div class="property-title">T4 standing vue panoramique sur la Saône</div>
-        <div class="property-location">📍 Lyon Confluence · 69002</div>
+        <div class="property-location"><i data-lucide="map-pin" style="width:13px;height:13px;stroke:#64748b;fill:none;"></i> Lyon Confluence · 69002</div>
         <div class="property-specs">
-          <div class="spec"><span class="spec-icon">📐</span> 105 m²</div>
-          <div class="spec"><span class="spec-icon">🚪</span> 4 pièces</div>
-          <div class="spec"><span class="spec-icon">🌅</span> Vue fleuve</div>
-          <div class="spec"><span class="spec-icon">🏋️</span> Piscine</div>
+          <div class="spec"><i data-lucide="ruler" style="width:13px;height:13px;stroke:#94a3b8;fill:none;"></i> 105 m²</div>
+          <div class="spec"><i data-lucide="door-open" style="width:13px;height:13px;stroke:#94a3b8;fill:none;"></i> 4 pièces</div>
+          <div class="spec"><i data-lucide="waves" style="width:13px;height:13px;stroke:#94a3b8;fill:none;"></i> Vue fleuve</div>
+          <div class="spec"><i data-lucide="dumbbell" style="width:13px;height:13px;stroke:#94a3b8;fill:none;"></i> Piscine</div>
         </div>
       </div>
     </div>
@@ -835,17 +278,17 @@
       <div class="property-img">
         <img src="https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=600&q=80" alt="T2 Monplaisir" loading="lazy" />
         <span class="property-badge new">Nouveau</span>
-        <div class="property-like">🤍</div>
+        <button class="property-save"><i data-lucide="heart" style="width:14px;height:14px;stroke:#94a3b8;fill:none;"></i></button>
       </div>
       <div class="property-body">
         <div class="property-price">195 000 €</div>
         <div class="property-title">T2 cosy avec balcon plein sud — Monplaisir</div>
-        <div class="property-location">📍 Lyon 8ème · 69008</div>
+        <div class="property-location"><i data-lucide="map-pin" style="width:13px;height:13px;stroke:#64748b;fill:none;"></i> Lyon 8ème · 69008</div>
         <div class="property-specs">
-          <div class="spec"><span class="spec-icon">📐</span> 47 m²</div>
-          <div class="spec"><span class="spec-icon">🚪</span> 2 pièces</div>
-          <div class="spec"><span class="spec-icon">🌿</span> Balcon</div>
-          <div class="spec"><span class="spec-icon">🔼</span> Ascenseur</div>
+          <div class="spec"><i data-lucide="ruler" style="width:13px;height:13px;stroke:#94a3b8;fill:none;"></i> 47 m²</div>
+          <div class="spec"><i data-lucide="door-open" style="width:13px;height:13px;stroke:#94a3b8;fill:none;"></i> 2 pièces</div>
+          <div class="spec"><i data-lucide="leaf" style="width:13px;height:13px;stroke:#94a3b8;fill:none;"></i> Balcon</div>
+          <div class="spec"><i data-lucide="arrow-up-down" style="width:13px;height:13px;stroke:#94a3b8;fill:none;"></i> Ascenseur</div>
         </div>
       </div>
     </div>
@@ -854,17 +297,17 @@
       <div class="property-img">
         <img src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600&q=80" alt="Villa Caluire" loading="lazy" />
         <span class="property-badge exclusive">Exclusivité</span>
-        <div class="property-like">🤍</div>
+        <button class="property-save"><i data-lucide="heart" style="width:14px;height:14px;stroke:#94a3b8;fill:none;"></i></button>
       </div>
       <div class="property-body">
         <div class="property-price">890 000 €</div>
         <div class="property-title">Villa contemporaine avec piscine privative</div>
-        <div class="property-location">📍 Caluire-et-Cuire · 69300</div>
+        <div class="property-location"><i data-lucide="map-pin" style="width:13px;height:13px;stroke:#64748b;fill:none;"></i> Caluire-et-Cuire · 69300</div>
         <div class="property-specs">
-          <div class="spec"><span class="spec-icon">📐</span> 220 m²</div>
-          <div class="spec"><span class="spec-icon">🚪</span> 7 pièces</div>
-          <div class="spec"><span class="spec-icon">🏊</span> Piscine</div>
-          <div class="spec"><span class="spec-icon">🌿</span> 800 m²</div>
+          <div class="spec"><i data-lucide="ruler" style="width:13px;height:13px;stroke:#94a3b8;fill:none;"></i> 220 m²</div>
+          <div class="spec"><i data-lucide="door-open" style="width:13px;height:13px;stroke:#94a3b8;fill:none;"></i> 7 pièces</div>
+          <div class="spec"><i data-lucide="waves" style="width:13px;height:13px;stroke:#94a3b8;fill:none;"></i> Piscine</div>
+          <div class="spec"><i data-lucide="tree-pine" style="width:13px;height:13px;stroke:#94a3b8;fill:none;"></i> 800 m²</div>
         </div>
       </div>
     </div>
@@ -872,17 +315,17 @@
     <div class="property-card">
       <div class="property-img">
         <img src="https://images.unsplash.com/photo-1484154218962-a197022b5858?w=600&q=80" alt="Loft Croix-Rousse" loading="lazy" />
-        <div class="property-like">🤍</div>
+        <button class="property-save"><i data-lucide="heart" style="width:14px;height:14px;stroke:#94a3b8;fill:none;"></i></button>
       </div>
       <div class="property-body">
         <div class="property-price">320 000 €</div>
         <div class="property-title">Loft atypique rénové — La Croix-Rousse</div>
-        <div class="property-location">📍 Lyon 4ème · 69004</div>
+        <div class="property-location"><i data-lucide="map-pin" style="width:13px;height:13px;stroke:#64748b;fill:none;"></i> Lyon 4ème · 69004</div>
         <div class="property-specs">
-          <div class="spec"><span class="spec-icon">📐</span> 85 m²</div>
-          <div class="spec"><span class="spec-icon">🚪</span> 3 pièces</div>
-          <div class="spec"><span class="spec-icon">✨</span> Rénové</div>
-          <div class="spec"><span class="spec-icon">🌆</span> Vue ville</div>
+          <div class="spec"><i data-lucide="ruler" style="width:13px;height:13px;stroke:#94a3b8;fill:none;"></i> 85 m²</div>
+          <div class="spec"><i data-lucide="door-open" style="width:13px;height:13px;stroke:#94a3b8;fill:none;"></i> 3 pièces</div>
+          <div class="spec"><i data-lucide="sparkles" style="width:13px;height:13px;stroke:#94a3b8;fill:none;"></i> Rénové</div>
+          <div class="spec"><i data-lucide="mountain" style="width:13px;height:13px;stroke:#94a3b8;fill:none;"></i> Vue ville</div>
         </div>
       </div>
     </div>
@@ -890,7 +333,7 @@
   </div>
 </section>
 
-<!-- ── FEATURES ─────────────────────────────────────────────────────────── -->
+<!-- FEATURES -->
 <div class="features-section">
   <div class="features-inner">
     <div class="features-top">
@@ -899,127 +342,139 @@
     </div>
     <div class="features-grid">
       <div class="feature-card">
-        <div class="feature-icon">🤖</div>
+        <div class="feature-icon"><i data-lucide="bot" style="width:22px;height:22px;stroke:white;fill:none;"></i></div>
         <h3>Assistant IA 24h/24</h3>
         <p>Notre IA répond instantanément à vos questions et qualifie votre projet immobilier à toute heure.</p>
       </div>
       <div class="feature-card">
-        <div class="feature-icon">🔍</div>
+        <div class="feature-icon"><i data-lucide="search" style="width:22px;height:22px;stroke:white;fill:none;"></i></div>
         <h3>Recherche intelligente</h3>
         <p>Décrivez votre projet en langage naturel, l'IA identifie les biens qui correspondent exactement à vos critères.</p>
       </div>
       <div class="feature-card">
-        <div class="feature-icon">📊</div>
+        <div class="feature-icon"><i data-lucide="bar-chart-3" style="width:22px;height:22px;stroke:white;fill:none;"></i></div>
         <h3>Estimation précise</h3>
         <p>Analyse des données du marché en temps réel pour une estimation fiable de votre bien.</p>
       </div>
       <div class="feature-card">
-        <div class="feature-icon">🎙️</div>
+        <div class="feature-icon"><i data-lucide="phone" style="width:22px;height:22px;stroke:white;fill:none;"></i></div>
         <h3>Assistance vocale</h3>
-        <p>Appelez directement notre agent vocal IA pour une consultation immobilière par téléphone.</p>
+        <p>Appelez notre agent vocal IA pour une consultation immobilière par téléphone, disponible à tout moment.</p>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ── AI SECTION ───────────────────────────────────────────────────────── -->
+<!-- AI SECTION -->
 <div class="ai-section">
   <div class="ai-inner">
     <div class="ai-text">
       <h2>Un assistant qui comprend votre <span>projet de vie</span></h2>
-      <p>Notre assistant IA ne se contente pas de filtrer des annonces. Il comprend votre situation, vos contraintes et vos rêves pour vous proposer les biens les plus pertinents.</p>
+      <p>Notre assistant IA ne se contente pas de filtrer des annonces. Il comprend votre situation, vos contraintes et vos envies pour vous proposer les biens les plus pertinents.</p>
       <ul class="ai-points">
-        <li>Recherche par critères en langage naturel</li>
-        <li>Présentation détaillée des biens avec photos</li>
-        <li>Disponible 7j/7, 24h/24 sans attente</li>
-        <li>Transfert vers un conseiller humain si besoin</li>
-        <li>Suivi personnalisé de votre projet</li>
+        <li><div class="ai-check"><i data-lucide="check" style="width:12px;height:12px;stroke:#15803d;fill:none;"></i></div> Recherche par critères en langage naturel</li>
+        <li><div class="ai-check"><i data-lucide="check" style="width:12px;height:12px;stroke:#15803d;fill:none;"></i></div> Présentation détaillée des biens avec photos</li>
+        <li><div class="ai-check"><i data-lucide="check" style="width:12px;height:12px;stroke:#15803d;fill:none;"></i></div> Disponible 7j/7, 24h/24 sans attente</li>
+        <li><div class="ai-check"><i data-lucide="check" style="width:12px;height:12px;stroke:#15803d;fill:none;"></i></div> Transfert vers un conseiller humain si besoin</li>
+        <li><div class="ai-check"><i data-lucide="check" style="width:12px;height:12px;stroke:#15803d;fill:none;"></i></div> Suivi personnalisé de votre projet</li>
       </ul>
     </div>
     <div class="ai-visual">
-      <div style="font-size:13px;font-weight:600;color:#64748b;margin-bottom:4px;">💬 Conversation en direct</div>
+      <div style="font-size:13px;font-weight:600;color:#64748b;margin-bottom:4px;display:flex;align-items:center;gap:6px;">
+        <i data-lucide="message-circle" style="width:14px;height:14px;stroke:#64748b;fill:none;"></i> Conversation en direct
+      </div>
       <div class="chat-preview">
         <div class="chat-msg">
-          <div class="chat-avatar">👤</div>
-          <div class="chat-bubble user-bubble" style="margin-left:auto">Je cherche un T3 à Lyon avec un jardin, budget 400 000 €</div>
+          <div class="chat-avatar" style="background:#e2e8f0;color:#64748b;"><i data-lucide="user" style="width:14px;height:14px;stroke:#64748b;fill:none;"></i></div>
+          <div class="chat-bubble user">Je cherche un T3 à Lyon avec un jardin, budget 400 000 €</div>
         </div>
         <div class="chat-msg">
-          <div class="chat-avatar" style="background:#059669;">🏠</div>
+          <div class="chat-avatar" style="background:#059669;"><i data-lucide="home" style="width:14px;height:14px;stroke:white;fill:none;"></i></div>
           <div class="chat-bubble">
-            <strong>Bonjour !</strong> J'ai trouvé 3 biens qui correspondent à vos critères :<br><br>
-            🏡 <strong>Maison T3 — Caluire</strong> · 115 m² · 385 000 €<br>
-            🏢 <strong>T3 avec terrasse — Lyon 6</strong> · 78 m² · 370 000 €<br>
-            🏠 <strong>Maison de ville — Villeurbanne</strong> · 95 m² · 395 000 €
+            <strong>Bonjour !</strong> J'ai trouvé 3 biens correspondant à vos critères :<br><br>
+            — <strong>Maison T3 — Caluire</strong> · 115 m² · 385 000 €<br>
+            — <strong>T3 avec terrasse — Lyon 6</strong> · 78 m² · 370 000 €<br>
+            — <strong>Maison de ville — Villeurbanne</strong> · 95 m² · 395 000 €
           </div>
         </div>
         <div class="chat-msg">
-          <div class="chat-avatar">👤</div>
-          <div class="chat-bubble user-bubble" style="margin-left:auto">Le premier m'intéresse, il a un garage ?</div>
+          <div class="chat-avatar" style="background:#e2e8f0;color:#64748b;"><i data-lucide="user" style="width:14px;height:14px;stroke:#64748b;fill:none;"></i></div>
+          <div class="chat-bubble user">Le premier m'intéresse, il a un garage ?</div>
         </div>
         <div class="chat-msg">
-          <div class="chat-avatar" style="background:#059669;">🏠</div>
-          <div class="chat-bubble">Oui, il dispose d'un garage double et d'un jardin de 250 m². Souhaitez-vous que je vous arrange une visite ? 📅</div>
+          <div class="chat-avatar" style="background:#059669;"><i data-lucide="home" style="width:14px;height:14px;stroke:white;fill:none;"></i></div>
+          <div class="chat-bubble">Oui, il dispose d'un garage double et d'un jardin de 250 m². Souhaitez-vous que je vous arrange une visite ?</div>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ── TESTIMONIALS ──────────────────────────────────────────────────────── -->
+<!-- TESTIMONIALS -->
 <section class="testimonials-section section">
   <div class="section-header">
     <div>
       <h2 class="section-title">Ce que disent nos clients</h2>
-      <p class="section-sub">+1 200 familles accompagnées depuis 2010</p>
+      <p class="section-sub">Plus de 1 200 familles accompagnées depuis 2010</p>
     </div>
   </div>
   <div class="testimonials-grid">
     <div class="testimonial">
-      <div class="stars">★★★★★</div>
+      <div class="stars">
+        <i data-lucide="star" style="width:16px;height:16px;stroke:#f59e0b;fill:#f59e0b;"></i>
+        <i data-lucide="star" style="width:16px;height:16px;stroke:#f59e0b;fill:#f59e0b;"></i>
+        <i data-lucide="star" style="width:16px;height:16px;stroke:#f59e0b;fill:#f59e0b;"></i>
+        <i data-lucide="star" style="width:16px;height:16px;stroke:#f59e0b;fill:#f59e0b;"></i>
+        <i data-lucide="star" style="width:16px;height:16px;stroke:#f59e0b;fill:#f59e0b;"></i>
+      </div>
       <p>« L'assistant IA a trouvé notre appartement en 10 minutes. Il a compris exactement ce qu'on cherchait sans qu'on ait besoin de tout expliquer. »</p>
       <div class="testimonial-author">
         <img class="author-avatar" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&q=80" alt="Sophie M." />
-        <div>
-          <div class="author-name">Sophie M.</div>
-          <div class="author-role">Acquéreur — Lyon 3ème</div>
-        </div>
+        <div><div class="author-name">Sophie M.</div><div class="author-role">Acquéreur — Lyon 3ème</div></div>
       </div>
     </div>
     <div class="testimonial">
-      <div class="stars">★★★★★</div>
+      <div class="stars">
+        <i data-lucide="star" style="width:16px;height:16px;stroke:#f59e0b;fill:#f59e0b;"></i>
+        <i data-lucide="star" style="width:16px;height:16px;stroke:#f59e0b;fill:#f59e0b;"></i>
+        <i data-lucide="star" style="width:16px;height:16px;stroke:#f59e0b;fill:#f59e0b;"></i>
+        <i data-lucide="star" style="width:16px;height:16px;stroke:#f59e0b;fill:#f59e0b;"></i>
+        <i data-lucide="star" style="width:16px;height:16px;stroke:#f59e0b;fill:#f59e0b;"></i>
+      </div>
       <p>« J'ai appelé le numéro un dimanche soir et l'agent vocal m'a donné toutes les infos sur le bien que je voulais visiter. Impressionnant. »</p>
       <div class="testimonial-author">
         <img class="author-avatar" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&q=80" alt="Marc D." />
-        <div>
-          <div class="author-name">Marc D.</div>
-          <div class="author-role">Investisseur — Villeurbanne</div>
-        </div>
+        <div><div class="author-name">Marc D.</div><div class="author-role">Investisseur — Villeurbanne</div></div>
       </div>
     </div>
     <div class="testimonial">
-      <div class="stars">★★★★★</div>
+      <div class="stars">
+        <i data-lucide="star" style="width:16px;height:16px;stroke:#f59e0b;fill:#f59e0b;"></i>
+        <i data-lucide="star" style="width:16px;height:16px;stroke:#f59e0b;fill:#f59e0b;"></i>
+        <i data-lucide="star" style="width:16px;height:16px;stroke:#f59e0b;fill:#f59e0b;"></i>
+        <i data-lucide="star" style="width:16px;height:16px;stroke:#f59e0b;fill:#f59e0b;"></i>
+        <i data-lucide="star" style="width:16px;height:16px;stroke:#f59e0b;fill:#f59e0b;"></i>
+      </div>
       <p>« Service exceptionnel. Le chatbot répond instantanément et les conseillers prennent vraiment le temps d'écouter. On a vendu en 3 semaines. »</p>
       <div class="testimonial-author">
-        <img class="images.unsplash.com/photo-1580489944761-15a19d654956?w=80&q=80" src="https://images.unsplash.com/photo-1580489944761-15a19d654956?w=80&q=80" class="author-avatar" alt="Camille R." />
-        <div>
-          <div class="author-name">Camille R.</div>
-          <div class="author-role">Vendeur — Caluire-et-Cuire</div>
-        </div>
+        <img class="author-avatar" src="https://images.unsplash.com/photo-1580489944761-15a19d654956?w=80&q=80" alt="Camille R." />
+        <div><div class="author-name">Camille R.</div><div class="author-role">Vendeur — Caluire-et-Cuire</div></div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ── CTA ───────────────────────────────────────────────────────────────── -->
+<!-- CTA -->
 <div class="cta-section">
   <h2>Prêt à trouver votre bien idéal ?</h2>
   <p>Parlez à notre assistant IA maintenant — gratuit, sans engagement, disponible immédiatement.</p>
   <button class="btn-cta" onclick="document.getElementById('ap-widget-btn').click()">
-    💬 Démarrer la conversation
+    <i data-lucide="message-circle" style="width:18px;height:18px;stroke:#1d4ed8;fill:none;"></i>
+    Démarrer la conversation
   </button>
 </div>
 
-<!-- ── FOOTER ────────────────────────────────────────────────────────────── -->
+<!-- FOOTER -->
 <footer>
   <div class="footer-inner">
     <div class="footer-logo">Immo<span>Plus</span></div>
@@ -1028,9 +483,13 @@
   </div>
 </footer>
 
-<!-- AutoPilot Immo Widget -->
+<!-- Widget -->
 <link rel="stylesheet" href="chatbot.css" />
 <script src="chatbot.js" data-api=""></script>
+
+<script>
+  lucide.createIcons();
+</script>
 
 </body>
 </html>

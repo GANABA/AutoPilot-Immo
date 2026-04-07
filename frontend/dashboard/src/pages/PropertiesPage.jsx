@@ -1,27 +1,37 @@
 import { useEffect, useRef, useState } from 'react'
-import { Search, Sparkles, Paperclip, Check, ChevronRight } from 'lucide-react'
+import {
+  Search, Sparkles, Paperclip, Check, FileText, Ruler,
+  DoorOpen, ParkingSquare, Leaf, Building2, MapPin,
+  Loader2, Euro, BedDouble, Zap, ArrowUpDown
+} from 'lucide-react'
 import {
   generateListings, getDocuments, getListings, getProperties,
   updateListing, uploadDocument,
 } from '../api/client'
 
-const STATUS_BADGE = {
-  active:    'bg-green-100 text-green-700',
-  inactive:  'bg-slate-100 text-slate-500',
-  sold:      'bg-gray-100 text-gray-500',
-  draft:     'bg-yellow-100 text-yellow-700',
-  approved:  'bg-green-100 text-green-700',
-  published: 'bg-blue-100 text-blue-700',
-  pending:   'bg-yellow-100 text-yellow-700',
-  processing:'bg-blue-100 text-blue-700',
-  done:      'bg-green-100 text-green-700',
-  error:     'bg-red-100 text-red-700',
+const STATUS_COLORS = {
+  active:     'bg-emerald-100 text-emerald-700',
+  inactive:   'bg-slate-100 text-slate-500',
+  sold:       'bg-gray-100 text-gray-500',
+  draft:      'bg-amber-100 text-amber-700',
+  approved:   'bg-emerald-100 text-emerald-700',
+  published:  'bg-blue-100 text-blue-700',
+  pending:    'bg-amber-100 text-amber-700',
+  processing: 'bg-blue-100 text-blue-700',
+  done:       'bg-emerald-100 text-emerald-700',
+  error:      'bg-red-100 text-red-700',
+}
+
+const STATUS_LABELS = {
+  active: 'Actif', inactive: 'Inactif', sold: 'Vendu',
+  draft: 'Brouillon', approved: 'Approuvé', published: 'Publié',
+  pending: 'En attente', processing: 'En cours', done: 'Analysé', error: 'Erreur',
 }
 
 function Badge({ status }) {
   return (
-    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_BADGE[status] || 'bg-slate-100 text-slate-500'}`}>
-      {status}
+    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[status] || 'bg-slate-100 text-slate-500'}`}>
+      {STATUS_LABELS[status] || status}
     </span>
   )
 }
@@ -29,25 +39,26 @@ function Badge({ status }) {
 function Toast({ msg, type, onClose }) {
   useEffect(() => { const t = setTimeout(onClose, 3500); return () => clearTimeout(t) }, [onClose])
   return (
-    <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-xl shadow-lg text-sm font-medium ${
-      type === 'error' ? 'bg-red-600 text-white' : 'bg-green-600 text-white'
+    <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-xl shadow-lg text-sm font-medium flex items-center gap-2 ${
+      type === 'error' ? 'bg-red-600 text-white' : 'bg-emerald-600 text-white'
     }`}>
-      {msg}
+      <Check size={14} /> {msg}
     </div>
   )
 }
 
-// ── Detail tabs ───────────────────────────────────────────────────────────────
+const PLATFORM_META = {
+  leboncoin: { label: 'Leboncoin', color: 'bg-orange-50 text-orange-700 border-orange-200' },
+  seloger:   { label: 'SeLoger',   color: 'bg-blue-50 text-blue-700 border-blue-200' },
+  website:   { label: 'Site web',  color: 'bg-slate-50 text-slate-700 border-slate-200' },
+}
 
 function ListingsTab({ property }) {
   const [listings, setListings] = useState([])
-  const [loading, setLoading] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [toast, setToast] = useState(null)
 
-  useEffect(() => {
-    getListings(property.id).then(setListings).catch(() => {})
-  }, [property.id])
+  useEffect(() => { getListings(property.id).then(setListings).catch(() => {}) }, [property.id])
 
   const generate = async () => {
     setGenerating(true)
@@ -57,63 +68,60 @@ function ListingsTab({ property }) {
       setToast({ msg: `${res.platforms.length} annonces générées`, type: 'success' })
     } catch (e) {
       setToast({ msg: e.message, type: 'error' })
-    } finally {
-      setGenerating(false)
-    }
+    } finally { setGenerating(false) }
   }
 
   const approve = async (listing) => {
     try {
       const updated = await updateListing(listing.id, { status: 'approved' })
       setListings(ls => ls.map(l => l.id === updated.id ? updated : l))
-    } catch (e) {
-      setToast({ msg: e.message, type: 'error' })
-    }
+    } catch (e) { setToast({ msg: e.message, type: 'error' }) }
   }
-
-  const PLATFORM_LABELS = { leboncoin: 'Leboncoin', seloger: 'SeLoger', website: 'Site web' }
 
   return (
     <div>
       {toast && <Toast {...toast} onClose={() => setToast(null)} />}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-5">
         <span className="text-sm text-slate-500">{listings.length} annonce(s)</span>
         <button
           onClick={generate}
           disabled={generating}
-          className="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+          className="bg-blue-600 text-white text-sm px-4 py-2 rounded-xl hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 font-medium transition-colors"
         >
-          <Sparkles size={14} />
+          {generating ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
           {generating ? 'Génération…' : 'Générer les annonces'}
         </button>
       </div>
 
       {listings.length === 0 ? (
-        <div className="text-center py-12 text-slate-400 text-sm">
-          Cliquez sur "Générer les annonces" pour créer les textes Leboncoin, SeLoger et site web.
+        <div className="text-center py-16 text-slate-400">
+          <FileText size={36} className="mx-auto mb-3 text-slate-200" />
+          <p className="text-sm">Cliquez sur "Générer les annonces" pour créer les textes Leboncoin, SeLoger et site web.</p>
         </div>
       ) : (
         <div className="space-y-4">
-          {listings.map(l => (
-            <div key={l.id} className="border border-slate-100 rounded-xl p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-medium text-slate-700">{PLATFORM_LABELS[l.platform] || l.platform}</span>
-                <div className="flex items-center gap-2">
-                  <Badge status={l.status} />
-                  {l.status === 'draft' && (
-                    <button
-                      onClick={() => approve(l)}
-                      className="text-xs text-blue-600 hover:underline flex items-center gap-1"
-                    >
-                      <Check size={12} /> Approuver
-                    </button>
-                  )}
+          {listings.map(l => {
+            const meta = PLATFORM_META[l.platform] || { label: l.platform, color: 'bg-slate-50 text-slate-700 border-slate-200' }
+            return (
+              <div key={l.id} className="border border-slate-100 rounded-2xl overflow-hidden">
+                <div className="flex items-center justify-between px-5 py-3 bg-slate-50 border-b border-slate-100">
+                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${meta.color}`}>{meta.label}</span>
+                  <div className="flex items-center gap-3">
+                    <Badge status={l.status} />
+                    {l.status === 'draft' && (
+                      <button onClick={() => approve(l)} className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1">
+                        <Check size={12} /> Approuver
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className="px-5 py-4">
+                  <div className="text-sm font-semibold text-slate-800 mb-2">{l.title}</div>
+                  <div className="text-sm text-slate-500 whitespace-pre-wrap line-clamp-4 leading-relaxed">{l.content}</div>
                 </div>
               </div>
-              <div className="text-sm font-medium text-slate-800 mb-1">{l.title}</div>
-              <div className="text-sm text-slate-500 whitespace-pre-wrap line-clamp-4">{l.content}</div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>
@@ -126,9 +134,7 @@ function DocumentsTab({ property }) {
   const [toast, setToast] = useState(null)
   const fileRef = useRef()
 
-  useEffect(() => {
-    getDocuments(property.id).then(setDocs).catch(() => {})
-  }, [property.id])
+  useEffect(() => { getDocuments(property.id).then(setDocs).catch(() => {}) }, [property.id])
 
   const handleUpload = async (e) => {
     const file = e.target.files[0]
@@ -137,13 +143,10 @@ function DocumentsTab({ property }) {
     try {
       const doc = await uploadDocument(property.id, file)
       setDocs(d => [doc, ...d])
-      setToast({ msg: `Document analysé : ${doc.doc_type || 'other'}`, type: 'success' })
+      setToast({ msg: `Document analysé : ${doc.doc_type || 'autre'}`, type: 'success' })
     } catch (err) {
       setToast({ msg: err.message, type: 'error' })
-    } finally {
-      setUploading(false)
-      fileRef.current.value = ''
-    }
+    } finally { setUploading(false); fileRef.current.value = '' }
   }
 
   const DOC_LABELS = { dpe: 'DPE', copro: 'Copropriété', mandat: 'Mandat', other: 'Autre' }
@@ -151,37 +154,42 @@ function DocumentsTab({ property }) {
   return (
     <div>
       {toast && <Toast {...toast} onClose={() => setToast(null)} />}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-5">
         <span className="text-sm text-slate-500">{docs.length} document(s)</span>
-        <label className="bg-slate-700 text-white text-sm px-4 py-2 rounded-lg hover:bg-slate-800 cursor-pointer flex items-center gap-2">
-          <Paperclip size={14} />
-          {uploading ? 'Analyse…' : 'Uploader un PDF'}
+        <label className="bg-slate-800 text-white text-sm px-4 py-2 rounded-xl hover:bg-slate-900 cursor-pointer flex items-center gap-2 font-medium transition-colors">
+          {uploading ? <Loader2 size={14} className="animate-spin" /> : <Paperclip size={14} />}
+          {uploading ? 'Analyse en cours…' : 'Uploader un PDF'}
           <input ref={fileRef} type="file" accept=".pdf" onChange={handleUpload} className="hidden" disabled={uploading} />
         </label>
       </div>
 
       {docs.length === 0 ? (
-        <div className="text-center py-12 text-slate-400 text-sm">
-          Uploadez un PDF (DPE, copropriété, mandat) pour l'analyser avec l'IA.
+        <div className="text-center py-16 text-slate-400">
+          <Paperclip size={36} className="mx-auto mb-3 text-slate-200" />
+          <p className="text-sm">Uploadez un PDF (DPE, copropriété, mandat) pour l'analyser avec l'IA.</p>
         </div>
       ) : (
         <div className="space-y-3">
           {docs.map(doc => (
-            <div key={doc.id} className="border border-slate-100 rounded-xl p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-medium text-sm text-slate-700">{doc.filename}</span>
+            <div key={doc.id} className="border border-slate-100 rounded-2xl overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-3 bg-slate-50 border-b border-slate-100">
                 <div className="flex items-center gap-2">
-                  {doc.doc_type && <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{DOC_LABELS[doc.doc_type] || doc.doc_type}</span>}
+                  <FileText size={14} className="text-slate-400" />
+                  <span className="font-medium text-sm text-slate-700 truncate max-w-xs">{doc.filename}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {doc.doc_type && (
+                    <span className="text-xs bg-white border border-slate-200 text-slate-600 px-2 py-0.5 rounded-full">
+                      {DOC_LABELS[doc.doc_type] || doc.doc_type}
+                    </span>
+                  )}
                   <Badge status={doc.status} />
                 </div>
               </div>
               {doc.extracted_data && doc.status === 'done' && (
-                <div className="mt-2 bg-slate-50 rounded-lg p-3 text-xs font-mono text-slate-600 overflow-auto max-h-40">
+                <div className="px-5 py-3 bg-slate-50 text-xs font-mono text-slate-600 overflow-auto max-h-40">
                   {JSON.stringify(doc.extracted_data, null, 2)}
                 </div>
-              )}
-              {doc.extracted_data?.error && (
-                <div className="mt-2 text-xs text-red-500">{doc.extracted_data.error}</div>
               )}
             </div>
           ))}
@@ -190,8 +198,6 @@ function DocumentsTab({ property }) {
     </div>
   )
 }
-
-// ── Main component ────────────────────────────────────────────────────────────
 
 export default function PropertiesPage() {
   const [data, setData] = useState({ items: [], total: 0 })
@@ -203,9 +209,7 @@ export default function PropertiesPage() {
   useEffect(() => {
     setLoading(true)
     getProperties({ limit: 100 })
-      .then(setData)
-      .catch(() => {})
-      .finally(() => setLoading(false))
+      .then(setData).catch(() => {}).finally(() => setLoading(false))
   }, [])
 
   const filtered = (data.items || []).filter(p =>
@@ -217,83 +221,109 @@ export default function PropertiesPage() {
   const fmt = (n) => n?.toLocaleString('fr-FR') + ' €'
 
   return (
-    <div className="flex gap-6 h-full">
-      {/* ── Left: list ── */}
-      <div className="w-80 flex-shrink-0 flex flex-col gap-3">
+    <div className="flex gap-6 h-full min-h-0">
+      {/* Left — list */}
+      <div className="w-80 flex-shrink-0 flex flex-col gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Biens</h1>
-          <p className="text-slate-500 text-sm">{data.total} au catalogue</p>
+          <h1 className="text-2xl font-extrabold text-slate-800 tracking-tight">Biens</h1>
+          <p className="text-slate-400 text-sm mt-0.5">{data.total} biens au catalogue</p>
         </div>
-        <input
-          type="search"
-          placeholder="Rechercher…"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
+        <div className="relative">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="search"
+            placeholder="Rechercher un bien…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          />
+        </div>
         <div className="overflow-y-auto flex flex-col gap-2 flex-1">
           {loading ? (
-            <div className="text-slate-400 text-sm text-center py-8">Chargement…</div>
+            <div className="flex items-center justify-center py-12 text-slate-400">
+              <Loader2 size={20} className="animate-spin" />
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-12 text-slate-400 text-sm">Aucun bien trouvé</div>
           ) : filtered.map(p => (
             <button
               key={p.id}
               onClick={() => { setSelected(p); setTab('listings') }}
-              className={`text-left p-3 rounded-xl border transition-all ${
+              className={`text-left p-4 rounded-2xl border transition-all ${
                 selected?.id === p.id
-                  ? 'border-blue-400 bg-blue-50'
-                  : 'border-slate-100 bg-white hover:border-slate-200'
+                  ? 'border-blue-400 bg-blue-50 shadow-sm'
+                  : 'border-slate-100 bg-white hover:border-slate-200 hover:shadow-sm'
               }`}
             >
-              <div className="flex items-start justify-between gap-2">
-                <span className="text-sm font-medium text-slate-800 line-clamp-2">{p.title}</span>
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <span className="text-sm font-semibold text-slate-800 line-clamp-2 leading-snug">{p.title}</span>
                 <Badge status={p.status} />
               </div>
-              <div className="text-xs text-slate-400 mt-1">
-                {p.city} · {p.surface} m² · {fmt(p.price)}
+              <div className="flex items-center gap-3 text-xs text-slate-400">
+                <span className="flex items-center gap-1"><MapPin size={11} />{p.city}</span>
+                <span className="flex items-center gap-1"><Ruler size={11} />{p.surface} m²</span>
+                <span className="flex items-center gap-1 font-semibold text-blue-600"><Euro size={11} />{p.price?.toLocaleString('fr-FR')}</span>
               </div>
             </button>
           ))}
         </div>
       </div>
 
-      {/* ── Right: detail ── */}
+      {/* Right — detail */}
       {selected ? (
-        <div className="flex-1 bg-white rounded-xl shadow-sm border border-slate-100 p-6 overflow-y-auto">
-          <div className="mb-5">
-            <h2 className="text-xl font-bold text-slate-800">{selected.title}</h2>
-            <div className="flex items-center gap-3 mt-1 text-sm text-slate-500">
-              <span>{selected.city} {selected.zipcode}</span>
-              <span>·</span>
-              <span>{selected.surface} m²</span>
-              <span>·</span>
-              <span>{selected.nb_rooms} pièces</span>
-              <span>·</span>
-              <span className="font-semibold text-blue-600">{fmt(selected.price)}</span>
+        <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-100 flex flex-col overflow-hidden">
+          {/* Property header */}
+          <div className="px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white">
+            <h2 className="text-lg font-bold text-slate-800 mb-3">{selected.title}</h2>
+            <div className="flex flex-wrap gap-3">
+              {[
+                { icon: MapPin,       val: `${selected.city} ${selected.zipcode || ''}` },
+                { icon: Ruler,        val: `${selected.surface} m²` },
+                { icon: DoorOpen,     val: `${selected.nb_rooms} pièces` },
+                { icon: BedDouble,    val: `${selected.nb_bedrooms ?? '–'} chambres` },
+                { icon: ArrowUpDown,  val: `Étage ${selected.floor ?? '–'}` },
+              ].map(({ icon: Icon, val }) => (
+                <div key={val} className="flex items-center gap-1.5 text-xs text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full">
+                  <Icon size={12} className="text-slate-400" />
+                  {val}
+                </div>
+              ))}
+              <div className="flex items-center gap-1.5 text-sm font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full">
+                <Euro size={13} />
+                {selected.price?.toLocaleString('fr-FR')}
+              </div>
             </div>
           </div>
 
-          <div className="flex gap-1 mb-5 border-b border-slate-100 pb-1">
-            {[['listings', '📝 Annonces'], ['documents', '📄 Documents']].map(([key, label]) => (
+          {/* Tabs */}
+          <div className="flex gap-1 px-6 py-3 border-b border-slate-100">
+            {[
+              { key: 'listings',  icon: FileText,    label: 'Annonces' },
+              { key: 'documents', icon: Paperclip,   label: 'Documents' },
+            ].map(({ key, icon: Icon, label }) => (
               <button
                 key={key}
                 onClick={() => setTab(key)}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  tab === key ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-100'
+                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl transition-colors ${
+                  tab === key ? 'bg-blue-600 text-white' : 'text-slate-500 hover:bg-slate-100'
                 }`}
               >
-                {label}
+                <Icon size={14} /> {label}
               </button>
             ))}
           </div>
 
-          {tab === 'listings'   && <ListingsTab  property={selected} />}
-          {tab === 'documents'  && <DocumentsTab property={selected} />}
+          {/* Tab content */}
+          <div className="flex-1 overflow-y-auto p-6">
+            {tab === 'listings'  && <ListingsTab  property={selected} />}
+            {tab === 'documents' && <DocumentsTab property={selected} />}
+          </div>
         </div>
       ) : (
-        <div className="flex-1 flex items-center justify-center text-slate-400">
+        <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <ChevronRight size={40} className="mx-auto mb-3 text-slate-200" />
-            <p className="text-sm">Sélectionnez un bien pour voir le détail</p>
+            <Building2 size={48} className="mx-auto mb-4 text-slate-200" />
+            <p className="text-slate-400 text-sm">Sélectionnez un bien pour voir le détail</p>
           </div>
         </div>
       )}
