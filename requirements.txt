@@ -24,6 +24,7 @@ bcrypt==4.0.1
 openai==1.59.6
 langgraph>=0.2.0
 twilio>=9.0.0
+elevenlabs>=1.0.0
 
 # File uploads
 python-multipart==0.0.20

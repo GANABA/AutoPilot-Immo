@@ -35,12 +35,16 @@ class Settings(BaseSettings):
     def allowed_origins_list(self) -> list[str]:
         return [o.strip() for o in self.ALLOWED_ORIGINS.split(",") if o.strip()]
 
-    # External services (optional until Phase 4+)
+    # External services
     TWILIO_ACCOUNT_SID: str = ""
     TWILIO_AUTH_TOKEN: str = ""
     TWILIO_PHONE_NUMBER: str = ""
     SENDGRID_API_KEY: str = ""
     GOOGLE_CALENDAR_CREDENTIALS: str = "./credentials.json"
+
+    # ElevenLabs TTS
+    ELEVENLABS_API_KEY: str = ""
+    ELEVENLABS_VOICE_ID: str = ""
 
     # Seed data (used on first startup)
     ADMIN_EMAIL: str = "admin@immoplus.fr"

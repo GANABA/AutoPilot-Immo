@@ -2,18 +2,52 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
+import uuid
 
-from urllib.parse import quote, unquote
+from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import Response
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
+from fastapi.responses import FileResponse, Response
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_db
+from app.config import settings
 from app.database.models import Tenant
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+# Temp dir for ElevenLabs audio files served to Twilio
+_TTS_DIR = "/tmp/ap_tts"
+os.makedirs(_TTS_DIR, exist_ok=True)
+
+
+def _elevenlabs_tts(text: str) -> str | None:
+    """
+    Generate speech with ElevenLabs and save to a temp file.
+    Returns the file path, or None if ElevenLabs is not configured.
+    """
+    if not settings.ELEVENLABS_API_KEY or not settings.ELEVENLABS_VOICE_ID:
+        return None
+    try:
+        from elevenlabs import ElevenLabs
+        client = ElevenLabs(api_key=settings.ELEVENLABS_API_KEY)
+        audio_iter = client.text_to_speech.convert(
+            voice_id=settings.ELEVENLABS_VOICE_ID,
+            text=text,
+            model_id="eleven_multilingual_v2",
+            output_format="mp3_44100_128",
+        )
+        audio_bytes = b"".join(audio_iter)
+        filename = f"{uuid.uuid4().hex}.mp3"
+        path = os.path.join(_TTS_DIR, filename)
+        with open(path, "wb") as f:
+            f.write(audio_bytes)
+        return filename
+    except Exception as exc:
+        logger.error("ElevenLabs TTS error: %s", exc)
+        return None
 
 
 def _tts_preprocess(text: str) -> str:
@@ -120,6 +154,17 @@ async def voice_chat(
     )
 
 
+# ── ElevenLabs audio file endpoint ───────────────────────────────────────────
+
+@router.get("/audio/{filename}", include_in_schema=False)
+async def serve_tts_audio(filename: str):
+    """Serve a generated ElevenLabs TTS file to Twilio's <Play> verb."""
+    path = os.path.join(_TTS_DIR, filename)
+    if not os.path.exists(path) or ".." in filename:
+        raise HTTPException(status_code=404)
+    return FileResponse(path, media_type="audio/mpeg")
+
+
 # ── Twilio webhooks (production) ──────────────────────────────────────────────
 
 @router.post(
@@ -134,9 +179,15 @@ async def twilio_incoming(request: Request):
     """
     from twilio.twiml.voice_response import VoiceResponse, Gather
 
-    tenant_db: Session = next(
-        iter(request.app.state.__dict__.get("_db_sessions", [])), None
+    greeting = (
+        "Bonjour, bienvenue chez ImmoPlus. "
+        "Comment puis-je vous aider dans votre recherche immobilière ?"
     )
+
+    # Determine public base URL for ElevenLabs audio hosting
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host", "")
+    scheme = "https" if "render.com" in host or "onrender.com" in host else request.url.scheme
+    base_url = f"{scheme}://{host}"
 
     resp = VoiceResponse()
     gather = Gather(
@@ -147,12 +198,14 @@ async def twilio_incoming(request: Request):
         speech_timeout="auto",
         enhanced=True,
     )
-    gather.say(
-        "Bonjour, bienvenue chez ImmoPlus. "
-        "Comment puis-je vous aider dans votre recherche immobilière ?",
-        language="fr-FR",
-        voice="Polly.Lea",
-    )
+
+    # Try ElevenLabs first, fall back to Polly
+    tts_file = await asyncio.to_thread(_elevenlabs_tts, greeting)
+    if tts_file:
+        gather.play(f"{base_url}/voice/audio/{tts_file}")
+    else:
+        gather.say(greeting, language="fr-FR", voice="Polly.Lea")
+
     resp.append(gather)
     resp.say("Je n'ai pas entendu votre réponse. Au revoir.", language="fr-FR")
 
@@ -213,6 +266,11 @@ async def twilio_gather(request: Request):
     finally:
         db.close()
 
+    # Determine public base URL
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host", "")
+    scheme = "https" if "render.com" in host or "onrender.com" in host else request.url.scheme
+    base_url = f"{scheme}://{host}"
+
     # Respond and gather next turn
     gather = Gather(
         input="speech",
@@ -221,7 +279,14 @@ async def twilio_gather(request: Request):
         language="fr-FR",
         speech_timeout="auto",
     )
-    gather.say(_tts_preprocess(response_text), language="fr-FR", voice="Polly.Lea")
+
+    clean_text = _tts_preprocess(response_text)
+    tts_file = await asyncio.to_thread(_elevenlabs_tts, clean_text)
+    if tts_file:
+        gather.play(f"{base_url}/voice/audio/{tts_file}")
+    else:
+        gather.say(clean_text, language="fr-FR", voice="Polly.Lea")
+
     resp.append(gather)
     resp.say("Merci d'avoir appelé ImmoPlus. Au revoir !", language="fr-FR")
 
