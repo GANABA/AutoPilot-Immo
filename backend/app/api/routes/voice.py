@@ -266,19 +266,21 @@ async def twilio_gather(request: Request):
         tenant = db.query(Tenant).filter_by(slug="immoplus").first()
         tenant_id = str(tenant.id) if tenant else "unknown"
         agent = VoiceAgent(tenant_id=tenant_id)
-        response_text = await asyncio.to_thread(
-            agent.respond,
-            speech_result,
-            history=[],
-            db=db,
+        response_text = await asyncio.wait_for(
+            asyncio.to_thread(agent.respond, speech_result, history=[], db=db),
+            timeout=10.0,
         )
+    except asyncio.TimeoutError:
+        logger.error("Twilio VoiceAgent timed out after 10s")
+        response_text = "Je mets un peu de temps à répondre. Pouvez-vous reformuler votre demande ?"
     except Exception as exc:
         logger.error("Twilio VoiceAgent error: %s", exc)
         response_text = "Désolé, une erreur s'est produite. Veuillez rappeler ou contacter l'agence par email."
     finally:
         db.close()
 
-    base_url = settings.PUBLIC_URL.rstrip("/")
+    # Use Polly directly — avoids extra TTS API call and keeps response under Twilio's 15s timeout
+    clean_text = _tts_preprocess(response_text)
     gather = Gather(
         input="speech",
         action="/voice/twilio/gather",
@@ -286,15 +288,9 @@ async def twilio_gather(request: Request):
         language="fr-FR",
         speech_timeout="auto",
     )
-
-    clean_text = _tts_preprocess(response_text)
-    tts_file = await asyncio.to_thread(_openai_tts, clean_text)
-    if tts_file:
-        gather.play(f"{base_url}/voice/audio/{tts_file}")
-    else:
-        gather.say(clean_text, language="fr-FR", voice="Polly.Lea")
+    gather.say(clean_text, language="fr-FR", voice="Polly.Lea")
 
     resp.append(gather)
-    resp.say("Merci d'avoir appelé ImmoPlus. Au revoir !", language="fr-FR")
+    resp.say("Merci d'avoir appelé ImmoPlus. Au revoir !", language="fr-FR", voice="Polly.Lea")
 
     return Response(content=str(resp), media_type="application/xml")
