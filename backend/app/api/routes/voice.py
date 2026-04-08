@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import threading
 import uuid
 
 from urllib.parse import quote
@@ -22,15 +23,14 @@ router = APIRouter()
 _TTS_DIR = "/tmp/ap_tts"
 os.makedirs(_TTS_DIR, exist_ok=True)
 
+# In-memory task store for two-phase Twilio responses
+# task_id -> {"status": "pending"|"done", "text": str, "filename": str|None}
+_TASKS: dict[str, dict] = {}
+
 
 def _openai_tts(text: str) -> str | None:
-    """
-    Generate speech with OpenAI TTS and save to a temp MP3 file.
-    Returns the filename, or None on failure.
-    Voice: 'nova' (warm, natural French) — model: tts-1 (fast, low latency).
-    """
+    """Generate speech with OpenAI TTS (nova). Returns filename or None on failure."""
     if not settings.OPENAI_API_KEY:
-        logger.warning("OpenAI TTS: OPENAI_API_KEY not set — falling back to Polly")
         return None
     try:
         from openai import OpenAI
@@ -41,12 +41,11 @@ def _openai_tts(text: str) -> str | None:
             input=text,
             response_format="mp3",
         )
-        audio_bytes = response.content
         filename = f"{uuid.uuid4().hex}.mp3"
         path = os.path.join(_TTS_DIR, filename)
         with open(path, "wb") as f:
-            f.write(audio_bytes)
-        logger.info("OpenAI TTS: saved %d bytes → %s", len(audio_bytes), filename)
+            f.write(response.content)
+        logger.info("OpenAI TTS: %d bytes → %s", len(response.content), filename)
         return filename
     except Exception as exc:
         logger.error("OpenAI TTS error: %s", exc, exc_info=True)
@@ -80,7 +79,33 @@ def _tts_preprocess(text: str) -> str:
     return text.strip()
 
 
-MAX_AUDIO_SIZE = 25 * 1024 * 1024  # 25 MB (Whisper limit)
+def _run_voice_task(task_id: str, speech_result: str) -> None:
+    """Background thread: LLM response + OpenAI TTS. Stores result in _TASKS."""
+    from app.database.connection import SessionLocal
+    from app.agents.voice import VoiceAgent
+
+    db = SessionLocal()
+    try:
+        tenant = db.query(Tenant).filter_by(slug="immoplus").first()
+        tenant_id = str(tenant.id) if tenant else "unknown"
+        agent = VoiceAgent(tenant_id=tenant_id)
+        response_text = agent.respond(speech_result, history=[], db=db)
+        clean_text = _tts_preprocess(response_text)
+        filename = _openai_tts(clean_text)
+        _TASKS[task_id] = {"status": "done", "text": clean_text, "filename": filename}
+        logger.info("Voice task %s done (filename=%s)", task_id, filename)
+    except Exception as exc:
+        logger.error("Voice background task error: %s", exc, exc_info=True)
+        _TASKS[task_id] = {
+            "status": "done",
+            "text": "Désolé, une erreur s'est produite. Pouvez-vous reformuler votre demande ?",
+            "filename": None,
+        }
+    finally:
+        db.close()
+
+
+MAX_AUDIO_SIZE = 25 * 1024 * 1024
 
 
 def _get_tenant(db: Session) -> Tenant:
@@ -140,10 +165,9 @@ async def test_tts():
     """Quick diagnostic: generates a test audio file with OpenAI TTS."""
     import traceback
 
-    public_url = settings.PUBLIC_URL
     info = {
         "openai_key_set": bool(settings.OPENAI_API_KEY),
-        "public_url": public_url,
+        "public_url": settings.PUBLIC_URL,
         "tts_dir_exists": os.path.isdir(_TTS_DIR),
     }
 
@@ -159,15 +183,14 @@ async def test_tts():
             input="Bonjour, je suis l'assistante ImmoPlus. Comment puis-je vous aider ?",
             response_format="mp3",
         )
-        audio_bytes = response.content
-        info["audio_bytes"] = len(audio_bytes)
         filename = f"{uuid.uuid4().hex}.mp3"
         with open(os.path.join(_TTS_DIR, filename), "wb") as f:
-            f.write(audio_bytes)
+            f.write(response.content)
+        info["audio_bytes"] = len(response.content)
     except Exception as e:
         return {"ok": False, "error": str(e), "traceback": traceback.format_exc(), "info": info}
 
-    audio_url = f"{public_url.rstrip('/')}/voice/audio/{filename}"
+    audio_url = f"{settings.PUBLIC_URL.rstrip('/')}/voice/audio/{filename}"
     return {"ok": True, "audio_url": audio_url, "info": info}
 
 
@@ -214,8 +237,6 @@ async def twilio_incoming(request: Request):
         gather.say(greeting, language="fr-FR", voice="Polly.Lea")
 
     resp.append(gather)
-
-    # Retry once before hanging up
     retry_gather = Gather(
         input="speech",
         action="/voice/twilio/gather",
@@ -229,20 +250,22 @@ async def twilio_incoming(request: Request):
         voice="Polly.Lea",
     )
     resp.append(retry_gather)
-    resp.say("Merci d'avoir appelé ImmoPlus. Au revoir !", language="fr-FR")
+    resp.say("Merci d'avoir appelé ImmoPlus. Au revoir !", language="fr-FR", voice="Polly.Lea")
 
     return Response(content=str(resp), media_type="application/xml")
 
 
 @router.post(
     "/twilio/gather",
-    summary="Twilio webhook — processes caller speech and responds",
+    summary="Twilio webhook — captures speech, starts background processing",
     response_class=Response,
 )
 async def twilio_gather(request: Request):
-    from twilio.twiml.voice_response import VoiceResponse, Gather
-    from app.agents.voice import VoiceAgent
-    from app.database.connection import SessionLocal
+    """
+    Phase 1: immediately respond to Twilio with a hold message while
+    LLM + TTS runs in a background thread. Redirects to /twilio/respond/{id}.
+    """
+    from twilio.twiml.voice_response import VoiceResponse
 
     form = await request.form()
     speech_result = form.get("SpeechResult", "").strip()
@@ -250,6 +273,7 @@ async def twilio_gather(request: Request):
     resp = VoiceResponse()
 
     if not speech_result:
+        from twilio.twiml.voice_response import Gather
         gather = Gather(
             input="speech",
             action="/voice/twilio/gather",
@@ -261,26 +285,43 @@ async def twilio_gather(request: Request):
         resp.append(gather)
         return Response(content=str(resp), media_type="application/xml")
 
-    db = SessionLocal()
-    try:
-        tenant = db.query(Tenant).filter_by(slug="immoplus").first()
-        tenant_id = str(tenant.id) if tenant else "unknown"
-        agent = VoiceAgent(tenant_id=tenant_id)
-        response_text = await asyncio.wait_for(
-            asyncio.to_thread(agent.respond, speech_result, history=[], db=db),
-            timeout=10.0,
-        )
-    except asyncio.TimeoutError:
-        logger.error("Twilio VoiceAgent timed out after 10s")
-        response_text = "Je mets un peu de temps à répondre. Pouvez-vous reformuler votre demande ?"
-    except Exception as exc:
-        logger.error("Twilio VoiceAgent error: %s", exc)
-        response_text = "Désolé, une erreur s'est produite. Veuillez rappeler ou contacter l'agence par email."
-    finally:
-        db.close()
+    # Start LLM + TTS in background thread
+    task_id = uuid.uuid4().hex
+    _TASKS[task_id] = {"status": "pending"}
+    thread = threading.Thread(target=_run_voice_task, args=(task_id, speech_result), daemon=True)
+    thread.start()
 
-    # Use Polly directly — avoids extra TTS API call and keeps response under Twilio's 15s timeout
-    clean_text = _tts_preprocess(response_text)
+    # Immediately respond: say hold message, then redirect to phase 2
+    base_url = settings.PUBLIC_URL.rstrip("/")
+    resp.say("Un instant, je cherche la réponse pour vous.", language="fr-FR", voice="Polly.Lea")
+    resp.redirect(f"{base_url}/voice/twilio/respond/{task_id}", method="POST")
+
+    return Response(content=str(resp), media_type="application/xml")
+
+
+@router.post(
+    "/twilio/respond/{task_id}",
+    summary="Twilio webhook — phase 2: returns the generated OpenAI TTS response",
+    response_class=Response,
+)
+async def twilio_respond(task_id: str, request: Request):
+    """
+    Phase 2: waits for the background task to finish (up to 12s),
+    then returns TwiML with the OpenAI TTS audio.
+    """
+    from twilio.twiml.voice_response import VoiceResponse, Gather
+
+    # Poll until task is done (max 12s — stays under Twilio's 15s timeout)
+    for _ in range(120):
+        task = _TASKS.get(task_id)
+        if task and task["status"] == "done":
+            break
+        await asyncio.sleep(0.1)
+
+    task = _TASKS.pop(task_id, None)
+    base_url = settings.PUBLIC_URL.rstrip("/")
+
+    resp = VoiceResponse()
     gather = Gather(
         input="speech",
         action="/voice/twilio/gather",
@@ -288,7 +329,17 @@ async def twilio_gather(request: Request):
         language="fr-FR",
         speech_timeout="auto",
     )
-    gather.say(clean_text, language="fr-FR", voice="Polly.Lea")
+
+    if task and task.get("filename"):
+        gather.play(f"{base_url}/voice/audio/{task['filename']}")
+    elif task and task.get("text"):
+        gather.say(task["text"], language="fr-FR", voice="Polly.Lea")
+    else:
+        gather.say(
+            "Désolé, je n'ai pas pu traiter votre demande. Pouvez-vous rappeler ?",
+            language="fr-FR",
+            voice="Polly.Lea",
+        )
 
     resp.append(gather)
     resp.say("Merci d'avoir appelé ImmoPlus. Au revoir !", language="fr-FR", voice="Polly.Lea")
