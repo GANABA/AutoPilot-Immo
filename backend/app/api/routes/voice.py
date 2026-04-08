@@ -84,25 +84,44 @@ def _run_voice_task(task_id: str, speech_result: str) -> None:
     from app.database.connection import SessionLocal
     from app.agents.voice import VoiceAgent
 
+    response_text = None
+
+    # Attempt 1: full RAG pipeline (SupportAgent — property search + embeddings)
     db = SessionLocal()
     try:
         tenant = db.query(Tenant).filter_by(slug="immoplus").first()
         tenant_id = str(tenant.id) if tenant else "unknown"
         agent = VoiceAgent(tenant_id=tenant_id)
         response_text = agent.respond(speech_result, history=[], db=db)
-        clean_text = _tts_preprocess(response_text)
-        filename = _openai_tts(clean_text)
-        _TASKS[task_id] = {"status": "done", "text": clean_text, "filename": filename}
-        logger.info("Voice task %s done (filename=%s)", task_id, filename)
+        logger.info("Voice task %s: RAG response OK", task_id)
     except Exception as exc:
-        logger.error("Voice background task error: %s", exc, exc_info=True)
-        _TASKS[task_id] = {
-            "status": "done",
-            "text": "Désolé, une erreur s'est produite. Pouvez-vous reformuler votre demande ?",
-            "filename": None,
-        }
+        logger.warning("Voice task %s: RAG pipeline failed (%s) — trying direct LLM", task_id, exc)
     finally:
         db.close()
+
+    # Attempt 2: direct GPT-4o-mini without RAG (db=None)
+    if response_text is None:
+        try:
+            db2 = SessionLocal()
+            try:
+                tenant = db2.query(Tenant).filter_by(slug="immoplus").first()
+                tenant_id = str(tenant.id) if tenant else "unknown"
+            finally:
+                db2.close()
+            agent = VoiceAgent(tenant_id=tenant_id)
+            response_text = agent.respond(speech_result, history=[], db=None)
+            logger.info("Voice task %s: direct LLM response OK", task_id)
+        except Exception as exc2:
+            logger.error("Voice task %s: direct LLM also failed: %s", task_id, exc2, exc_info=True)
+            response_text = (
+                "Je suis désolée, je rencontre des difficultés techniques. "
+                "Pouvez-vous rappeler dans quelques instants ou nous écrire par email ?"
+            )
+
+    clean_text = _tts_preprocess(response_text)
+    filename = _openai_tts(clean_text)
+    _TASKS[task_id] = {"status": "done", "text": clean_text, "filename": filename}
+    logger.info("Voice task %s done (filename=%s)", task_id, filename)
 
 
 MAX_AUDIO_SIZE = 25 * 1024 * 1024
