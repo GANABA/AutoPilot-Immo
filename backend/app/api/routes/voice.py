@@ -196,14 +196,24 @@ async def test_elevenlabs():
     except Exception as e:
         return {"ok": False, "error": f"elevenlabs import failed: {e}", "info": info}
 
-    # Test actual TTS call
+    # Test actual TTS call — inline, no silent catch
     try:
-        filename = await asyncio.to_thread(_elevenlabs_tts, "Bonjour, test ElevenLabs.")
+        from elevenlabs import ElevenLabs
+        client = ElevenLabs(api_key=api_key)
+        audio_iter = client.text_to_speech.convert(
+            voice_id=voice_id,
+            text="Bonjour, test ElevenLabs.",
+            model_id="eleven_multilingual_v2",
+            output_format="mp3_44100_128",
+        )
+        audio_bytes = b"".join(audio_iter)
+        info["audio_bytes"] = len(audio_bytes)
+        filename = f"{uuid.uuid4().hex}.mp3"
+        path = os.path.join(_TTS_DIR, filename)
+        with open(path, "wb") as f:
+            f.write(audio_bytes)
     except Exception as e:
-        return {"ok": False, "error": f"asyncio.to_thread failed: {e}\n{traceback.format_exc()}", "info": info}
-
-    if not filename:
-        return {"ok": False, "error": "TTS returned None — check server logs for details", "info": info}
+        return {"ok": False, "error": str(e), "traceback": traceback.format_exc(), "info": info}
 
     audio_url = f"{public_url.rstrip('/')}/voice/audio/{filename}"
     return {"ok": True, "audio_url": audio_url, "voice_id": voice_id, "info": info}
