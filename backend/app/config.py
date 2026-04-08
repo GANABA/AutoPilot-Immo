@@ -46,6 +46,9 @@ class Settings(BaseSettings):
     ELEVENLABS_API_KEY: str = ""
     ELEVENLABS_VOICE_ID: str = ""
 
+    # Public URL (used by Twilio to fetch ElevenLabs audio)
+    PUBLIC_URL: str = "http://localhost:8000"
+
     # Seed data (used on first startup)
     ADMIN_EMAIL: str = "admin@immoplus.fr"
     ADMIN_PASSWORD: str = "admin123"
