@@ -30,7 +30,19 @@ class SupportState(TypedDict):
     response: str               # final assistant response
     detected_email: str         # email address detected in user message (or "")
     detected_name: str          # name detected in user message (or "")
+    available_slots: list       # calendar slots offered to prospect
+    booked_slot: dict           # confirmed slot {"label":..., "datetime":...} or {}
+    booking_intent: bool        # True if user expressed intent to visit
 
+
+_BOOKING_SYSTEM = (
+    "Analyse ce message dans le contexte d'une conversation immobilière.\n"
+    "Réponds UNIQUEMENT avec ce JSON :\n"
+    '{"booking_intent": true/false, '
+    '"slot_confirmation": "texte du créneau choisi ou null"}\n'
+    "booking_intent=true si l'utilisateur veut organiser/planifier/réserver une visite.\n"
+    "slot_confirmation=le créneau confirmé si l'utilisateur accepte un des créneaux proposés (ex: 'jeudi 10h', 'oui pour vendredi', 'le 17 à 14h')."
+)
 
 _CRITERIA_SYSTEM = (
     "Extrais les critères de recherche immobilière du message utilisateur.\n"
@@ -50,9 +62,35 @@ Règles :
 - Si aucun bien ne correspond, propose d'élargir les critères
 - Tu ne connais que les biens listés ci-dessous
 - Réponds toujours en français
+- Si le prospect veut visiter et que des créneaux sont disponibles, présente-les clairement
+- Si une visite vient d'être confirmée, confirme-la chaleureusement et rappelle les détails
 
 Biens disponibles correspondant à la recherche :
-{properties_context}"""
+{properties_context}
+
+{slots_context}"""
+
+
+def _match_slot(text: str, slots: list[dict]) -> dict | None:
+    """Find the slot that best matches a free-text confirmation like 'jeudi 10h'."""
+    text_lower = text.lower()
+    for slot in slots:
+        label = slot["label"].lower()
+        # Match on any word from the label appearing in the confirmation text
+        words = [w for w in label.split() if len(w) > 2]
+        if sum(1 for w in words if w in text_lower) >= 2:
+            return slot
+    # Fallback: return first slot if user said "oui" / "ok" / "parfait"
+    if any(k in text_lower for k in ("oui", "ok", "parfait", "ça me convient", "d'accord")):
+        return slots[0] if slots else None
+    return None
+
+
+def _first_property_title(state: SupportState) -> str:
+    props = state.get("matched_properties") or []
+    if props:
+        return getattr(props[0], "title", "Bien ImmoPlus")
+    return "Bien ImmoPlus"
 
 
 class SupportAgent(BaseAgent):
@@ -132,10 +170,71 @@ class SupportAgent(BaseAgent):
         detected_name = name_match.group(1).strip() if name_match else ""
         return {"detected_email": detected_email, "detected_name": detected_name}
 
+    def _handle_booking(self, state: SupportState) -> dict:
+        """Node 4 — detect booking intent, fetch slots, or confirm a visit."""
+        from app.services.calendar_service import get_available_slots, create_visit_event
+
+        # Detect booking intent / slot confirmation via LLM
+        try:
+            resp = self._client.chat.completions.create(
+                model=settings.OPENAI_MODEL_MINI,
+                messages=[
+                    {"role": "system", "content": _BOOKING_SYSTEM},
+                    {"role": "user", "content": state["user_message"]},
+                ],
+                response_format={"type": "json_object"},
+                temperature=0,
+            )
+            booking_data = json.loads(resp.choices[0].message.content)
+        except Exception as exc:
+            logger.warning("Booking detection failed: %s", exc)
+            booking_data = {}
+
+        booking_intent = bool(booking_data.get("booking_intent"))
+        slot_confirmation = booking_data.get("slot_confirmation")
+
+        available_slots = state.get("available_slots") or []
+        booked_slot: dict = {}
+
+        # Case 1: user confirms a slot → create the calendar event
+        if slot_confirmation and available_slots:
+            matched = _match_slot(slot_confirmation, available_slots)
+            if matched:
+                event_id = create_visit_event(
+                    slot_datetime=matched["datetime"],
+                    prospect_name=state.get("detected_name") or "Prospect",
+                    prospect_email=state.get("detected_email") or "",
+                    property_title=_first_property_title(state),
+                    agent_email="contact@immoplus.fr",
+                )
+                booked_slot = {**matched, "event_id": event_id or ""}
+                logger.info("Booking confirmed: %s → event %s", matched["label"], event_id)
+
+        # Case 2: booking intent with no prior slots → fetch available slots
+        elif booking_intent and not available_slots:
+            available_slots = get_available_slots()
+            logger.info("Booking intent detected — fetched %d slots", len(available_slots))
+
+        return {
+            "booking_intent": booking_intent,
+            "available_slots": available_slots,
+            "booked_slot": booked_slot,
+        }
+
     def _generate_response(self, state: SupportState) -> dict:
-        """Node 4 — generate the final assistant reply."""
+        """Node 5 — generate the final assistant reply."""
+        # Build calendar context for the LLM
+        slots_context = ""
+        if state.get("booked_slot"):
+            s = state["booked_slot"]
+            slots_context = f"VISITE CONFIRMÉE : {s['label']}. L'événement a été ajouté au calendrier."
+        elif state.get("available_slots"):
+            labels = "\n".join(f"- {s['display']}" for s in state["available_slots"][:5])
+            slots_context = f"Créneaux disponibles pour une visite :\n{labels}"
+
         system = _SUPPORT_SYSTEM.format(
-            properties_context=state["properties_context"]
+            properties_context=state["properties_context"],
+            slots_context=slots_context,
         )
         messages: list[dict] = [{"role": "system", "content": system}]
         messages.extend(state.get("history", []))
@@ -154,11 +253,13 @@ class SupportAgent(BaseAgent):
         g.add_node("extract_criteria", self._extract_criteria)
         g.add_node("search_properties", self._search_properties)
         g.add_node("detect_contact", self._detect_contact)
+        g.add_node("handle_booking", self._handle_booking)
         g.add_node("generate_response", self._generate_response)
         g.set_entry_point("extract_criteria")
         g.add_edge("extract_criteria", "search_properties")
         g.add_edge("search_properties", "detect_contact")
-        g.add_edge("detect_contact", "generate_response")
+        g.add_edge("detect_contact", "handle_booking")
+        g.add_edge("handle_booking", "generate_response")
         g.add_edge("generate_response", END)
         return g.compile()
 
@@ -177,6 +278,9 @@ class SupportAgent(BaseAgent):
             "response": "",
             "detected_email": "",
             "detected_name": "",
+            "available_slots": input_data.get("available_slots", []),
+            "booked_slot": {},
+            "booking_intent": False,
         }
         result = self._graph.invoke(state)
 
@@ -225,4 +329,6 @@ class SupportAgent(BaseAgent):
             "property_cards": cards,
             "detected_email": result.get("detected_email", ""),
             "detected_name": result.get("detected_name", ""),
+            "available_slots": result.get("available_slots", []),
+            "booked_slot": result.get("booked_slot", {}),
         }

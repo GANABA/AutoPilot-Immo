@@ -194,6 +194,48 @@ def send_agent_new_prospect(
     )
 
 
+def send_visit_confirmation(
+    prospect_name: str,
+    prospect_email: str,
+    slot_label: str,
+    property_title: str,
+) -> bool:
+    """Email sent to prospect when a visit is confirmed via the chatbot."""
+    first_name = prospect_name.split()[0] if prospect_name else "vous"
+    body = f"""
+    <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 16px;">
+      Bonjour <strong>{first_name}</strong>,
+    </p>
+    <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 24px;">
+      Votre visite est confirmée. Voici le récapitulatif :
+    </p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:8px;margin:0 0 32px;">
+      <tr><td style="padding:24px;">
+        <p style="margin:0 0 12px;color:#1a1a2e;font-size:16px;">
+          <strong>Bien :</strong> {property_title}
+        </p>
+        <p style="margin:0;color:#1a1a2e;font-size:16px;">
+          <strong>Date :</strong> {slot_label.capitalize()}
+        </p>
+      </td></tr>
+    </table>
+    <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 32px;">
+      Un de nos conseillers vous accueillera sur place. En cas d'empêchement,
+      n'hésitez pas à nous contacter pour reprogrammer.
+    </p>
+    <a href="mailto:contact@immoplus.fr?subject=Modification%20de%20visite"
+       style="display:inline-block;background:#1a1a2e;color:#ffffff;text-decoration:none;
+              padding:14px 28px;border-radius:8px;font-size:14px;font-weight:600;">
+      Nous contacter
+    </a>"""
+
+    return send_email(
+        to=prospect_email,
+        subject=f"Confirmation de visite — {property_title}",
+        html=_base_html("Votre visite est confirmée", body),
+    )
+
+
 def send_prospect_followup(
     prospect_name: str,
     prospect_email: str,

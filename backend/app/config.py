@@ -41,7 +41,9 @@ class Settings(BaseSettings):
     TWILIO_PHONE_NUMBER: str = ""
     SENDGRID_API_KEY: str = ""
     SENDGRID_FROM_EMAIL: str = "noreply@immoplus.fr"
-    GOOGLE_CALENDAR_CREDENTIALS: str = "./credentials.json"
+    # Google Calendar (Service Account JSON stored as env var content, not file path)
+    GOOGLE_CALENDAR_CREDENTIALS_JSON: str = ""
+    GOOGLE_CALENDAR_ID: str = "primary"
 
     # ElevenLabs TTS
     ELEVENLABS_API_KEY: str = ""

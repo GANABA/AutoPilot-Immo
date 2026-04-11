@@ -29,6 +29,11 @@ elevenlabs>=1.0.0
 # Email
 sendgrid>=6.11.0
 
+# Google Calendar
+google-api-python-client>=2.100.0
+google-auth>=2.23.0
+google-auth-httplib2>=0.2.0
+
 # File uploads
 python-multipart==0.0.20
 aiofiles>=23.0.0

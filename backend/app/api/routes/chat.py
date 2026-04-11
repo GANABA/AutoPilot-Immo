@@ -17,6 +17,16 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _send_visit_confirmation_email(
+    prospect_name: str,
+    prospect_email: str,
+    slot_label: str,
+    property_title: str,
+) -> None:
+    from app.services.email_service import send_visit_confirmation
+    send_visit_confirmation(prospect_name, prospect_email, slot_label, property_title)
+
+
 def _send_qualification_emails(
     prospect_name: str,
     prospect_email: str,
@@ -168,23 +178,31 @@ async def chat_websocket(websocket: WebSocket, conversation_id: UUID):
             # Typing indicator
             await websocket.send_json({"type": "typing"})
 
+            # Pass previously offered slots so agent can detect confirmation
+            conv_meta = conv.settings or {}
+            prior_slots = conv_meta.get("available_slots", [])
+
             # Run blocking agent in thread pool
             try:
                 result = await asyncio.to_thread(
                     agent.run,
-                    {"message": user_message, "history": history},
+                    {"message": user_message, "history": history, "available_slots": prior_slots},
                     db,
                 )
                 response_text = result["response"]
                 property_cards = result.get("property_cards", [])
                 detected_email = result.get("detected_email", "")
                 detected_name = result.get("detected_name", "")
+                available_slots = result.get("available_slots", [])
+                booked_slot = result.get("booked_slot", {})
             except Exception as exc:
                 logger.error("SupportAgent error: %s", exc, exc_info=True)
                 response_text = "Désolé, une erreur s'est produite. Veuillez réessayer."
                 property_cards = []
                 detected_email = ""
                 detected_name = ""
+                available_slots = []
+                booked_slot = {}
 
             # Update conversation with contact info if newly detected
             if detected_email and not conv.prospect_email:
@@ -194,6 +212,13 @@ async def chat_websocket(websocket: WebSocket, conversation_id: UUID):
                 db.commit()
                 logger.info("Prospect contact captured: %s <%s>", detected_name, detected_email)
 
+            # Persist offered slots so next turn can detect confirmation
+            if available_slots:
+                meta = conv.settings or {}
+                meta["available_slots"] = available_slots
+                conv.settings = meta
+                db.commit()
+
             # Persist assistant reply
             db.add(Message(
                 conversation_id=conversation_id,
@@ -202,8 +227,18 @@ async def chat_websocket(websocket: WebSocket, conversation_id: UUID):
             ))
             db.commit()
 
-            # Send emails when prospect is identified and properties were found
-            if property_cards and conv.prospect_email:
+            # Email: visit confirmation
+            if booked_slot and conv.prospect_email:
+                await asyncio.to_thread(
+                    _send_visit_confirmation_email,
+                    conv.prospect_name or "",
+                    conv.prospect_email,
+                    booked_slot.get("label", ""),
+                    property_cards[0]["title"] if property_cards else "Bien ImmoPlus",
+                )
+
+            # Email: qualification (properties found + email known)
+            elif property_cards and conv.prospect_email and not prior_slots:
                 await asyncio.to_thread(
                     _send_qualification_emails,
                     conv.prospect_name or "",
