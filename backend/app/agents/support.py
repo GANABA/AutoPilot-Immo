@@ -28,6 +28,8 @@ class SupportState(TypedDict):
     properties_context: str     # formatted property list for the LLM
     matched_properties: list    # raw Property objects for card rendering
     response: str               # final assistant response
+    detected_email: str         # email address detected in user message (or "")
+    detected_name: str          # name detected in user message (or "")
 
 
 _CRITERIA_SYSTEM = (
@@ -114,8 +116,24 @@ class SupportAgent(BaseAgent):
         )
         return {"properties_context": context, "matched_properties": props}
 
+    def _detect_contact(self, state: SupportState) -> dict:
+        """Node 3 — detect email/name in the user message via regex."""
+        import re
+        msg = state["user_message"]
+        email_match = re.search(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}", msg)
+        detected_email = email_match.group(0).lower() if email_match else ""
+
+        # Simple name detection: "je m'appelle X" / "c'est X" / "mon nom est X"
+        name_match = re.search(
+            r"(?:je m'appelle|mon nom est|c'est|je suis)\s+([A-ZÀÂÉÈÊË][a-zàâéèêëïîôùûü]+(?:\s+[A-ZÀÂÉÈÊË][a-zàâéèêëïîôùûü]+)?)",
+            msg,
+            re.IGNORECASE,
+        )
+        detected_name = name_match.group(1).strip() if name_match else ""
+        return {"detected_email": detected_email, "detected_name": detected_name}
+
     def _generate_response(self, state: SupportState) -> dict:
-        """Node 3 — generate the final assistant reply."""
+        """Node 4 — generate the final assistant reply."""
         system = _SUPPORT_SYSTEM.format(
             properties_context=state["properties_context"]
         )
@@ -135,10 +153,12 @@ class SupportAgent(BaseAgent):
         g = StateGraph(SupportState)
         g.add_node("extract_criteria", self._extract_criteria)
         g.add_node("search_properties", self._search_properties)
+        g.add_node("detect_contact", self._detect_contact)
         g.add_node("generate_response", self._generate_response)
         g.set_entry_point("extract_criteria")
         g.add_edge("extract_criteria", "search_properties")
-        g.add_edge("search_properties", "generate_response")
+        g.add_edge("search_properties", "detect_contact")
+        g.add_edge("detect_contact", "generate_response")
         g.add_edge("generate_response", END)
         return g.compile()
 
@@ -155,6 +175,8 @@ class SupportAgent(BaseAgent):
             "properties_context": "",
             "matched_properties": [],
             "response": "",
+            "detected_email": "",
+            "detected_name": "",
         }
         result = self._graph.invoke(state)
 
@@ -201,4 +223,6 @@ class SupportAgent(BaseAgent):
             "properties_context": result["properties_context"],
             "criteria": result["criteria"],
             "property_cards": cards,
+            "detected_email": result.get("detected_email", ""),
+            "detected_name": result.get("detected_name", ""),
         }

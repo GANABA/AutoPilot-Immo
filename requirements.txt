@@ -26,6 +26,9 @@ langgraph>=0.2.0
 twilio>=9.0.0
 elevenlabs>=1.0.0
 
+# Email
+sendgrid>=6.11.0
+
 # File uploads
 python-multipart==0.0.20
 aiofiles>=23.0.0

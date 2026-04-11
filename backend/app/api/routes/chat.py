@@ -17,6 +17,33 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _send_qualification_emails(
+    prospect_name: str,
+    prospect_email: str,
+    property_cards: list[dict],
+    conversation_id: str,
+    tenant,
+) -> None:
+    """
+    Fire both qualification emails in one call (runs in thread pool).
+    - Confirmation to the prospect with matching properties
+    - Notification to the agent with prospect details
+    Only sent once per email address (caller ensures conv.prospect_email was just set).
+    """
+    from app.services.email_service import send_prospect_confirmation, send_agent_new_prospect
+
+    send_prospect_confirmation(prospect_name, prospect_email, property_cards)
+
+    agent_email = (tenant.email if tenant else None) or "contact@immoplus.fr"
+    send_agent_new_prospect(
+        agent_email=agent_email,
+        prospect_name=prospect_name,
+        prospect_email=prospect_email,
+        properties=property_cards,
+        conversation_id=conversation_id,
+    )
+
+
 # ── REST endpoints ────────────────────────────────────────────────────────────
 
 @router.get("/conversations", response_model=list[ConversationRead])
@@ -150,10 +177,22 @@ async def chat_websocket(websocket: WebSocket, conversation_id: UUID):
                 )
                 response_text = result["response"]
                 property_cards = result.get("property_cards", [])
+                detected_email = result.get("detected_email", "")
+                detected_name = result.get("detected_name", "")
             except Exception as exc:
                 logger.error("SupportAgent error: %s", exc, exc_info=True)
                 response_text = "Désolé, une erreur s'est produite. Veuillez réessayer."
                 property_cards = []
+                detected_email = ""
+                detected_name = ""
+
+            # Update conversation with contact info if newly detected
+            if detected_email and not conv.prospect_email:
+                conv.prospect_email = detected_email
+                if detected_name and not conv.prospect_name:
+                    conv.prospect_name = detected_name
+                db.commit()
+                logger.info("Prospect contact captured: %s <%s>", detected_name, detected_email)
 
             # Persist assistant reply
             db.add(Message(
@@ -162,6 +201,17 @@ async def chat_websocket(websocket: WebSocket, conversation_id: UUID):
                 content=response_text,
             ))
             db.commit()
+
+            # Send emails when prospect is identified and properties were found
+            if property_cards and conv.prospect_email:
+                await asyncio.to_thread(
+                    _send_qualification_emails,
+                    conv.prospect_name or "",
+                    conv.prospect_email,
+                    property_cards,
+                    str(conversation_id),
+                    tenant,
+                )
 
             # Send property cards before text (only when properties were found)
             if property_cards:

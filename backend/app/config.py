@@ -40,6 +40,7 @@ class Settings(BaseSettings):
     TWILIO_AUTH_TOKEN: str = ""
     TWILIO_PHONE_NUMBER: str = ""
     SENDGRID_API_KEY: str = ""
+    SENDGRID_FROM_EMAIL: str = "noreply@immoplus.fr"
     GOOGLE_CALENDAR_CREDENTIALS: str = "./credentials.json"
 
     # ElevenLabs TTS
