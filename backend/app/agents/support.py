@@ -242,7 +242,9 @@ class SupportAgent(BaseAgent):
         slots_context = ""
         if state.get("booked_slot"):
             s = state["booked_slot"]
-            slots_context = f"VISITE CONFIRMÉE : {s['label']}. L'événement a été ajouté au calendrier."
+            event_id = s.get("event_id", "")
+            calendar_note = "L'événement a été ajouté au calendrier Google." if (event_id and not event_id.startswith("mock-")) else "La demande de visite a bien été enregistrée."
+            slots_context = f"VISITE CONFIRMÉE : {s['label']}. {calendar_note}"
         elif state.get("available_slots"):
             labels = "\n".join(f"- {s['display']}" for s in state["available_slots"][:5])
             slots_context = f"Créneaux disponibles pour une visite :\n{labels}"
