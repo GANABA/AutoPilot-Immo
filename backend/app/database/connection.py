@@ -13,6 +13,7 @@ engine = create_engine(
     pool_pre_ping=True,
     pool_size=5,
     max_overflow=10,
+    pool_recycle=300,   # Recycle connections after 5 min (Render idle timeout)
     connect_args=_connect_args,
 )
 

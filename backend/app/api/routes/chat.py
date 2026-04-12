@@ -263,4 +263,7 @@ async def chat_websocket(websocket: WebSocket, conversation_id: UUID):
         except Exception:
             pass
     finally:
-        db.close()
+        try:
+            db.close()
+        except Exception:
+            pass  # Connection may already be closed by Postgres idle timeout
