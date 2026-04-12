@@ -177,8 +177,10 @@ def create_visit_event(
         start_dt = datetime.fromisoformat(slot_datetime)
         end_dt = start_dt + timedelta(minutes=_SLOT_DURATION)
 
-        attendees = [{"email": prospect_email}]
-        if agent_email:
+        attendees = []
+        if prospect_email and "@" in prospect_email:
+            attendees.append({"email": prospect_email})
+        if agent_email and "@" in agent_email:
             attendees.append({"email": agent_email})
 
         event = {
