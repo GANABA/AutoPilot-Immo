@@ -137,6 +137,9 @@ async def chat_websocket(websocket: WebSocket, conversation_id: UUID):
         from app.agents.support import SupportAgent
         agent = SupportAgent(tenant_id=str(conv.tenant_id))
 
+        # In-memory slots state for multi-turn booking flow (per WebSocket connection)
+        session_slots: list = []
+
         # Welcome message from tenant settings
         welcome = (tenant.settings or {}).get(
             "default_greeting", "Bonjour ! Je suis l'assistant ImmoPlus. Comment puis-je vous aider ?"
@@ -178,9 +181,8 @@ async def chat_websocket(websocket: WebSocket, conversation_id: UUID):
             # Typing indicator
             await websocket.send_json({"type": "typing"})
 
-            # Pass previously offered slots so agent can detect confirmation
-            conv_meta = conv.settings or {}
-            prior_slots = conv_meta.get("available_slots", [])
+            # Pass previously offered slots (in-memory, same WebSocket session)
+            prior_slots = session_slots
 
             # Run blocking agent in thread pool
             result = {}
@@ -213,12 +215,9 @@ async def chat_websocket(websocket: WebSocket, conversation_id: UUID):
                 db.commit()
                 logger.info("Prospect contact captured: %s <%s>", detected_name, detected_email)
 
-            # Persist offered slots so next turn can detect confirmation
+            # Keep slots in memory for next turn in this session
             if available_slots:
-                meta = conv.settings or {}
-                meta["available_slots"] = available_slots
-                conv.settings = meta
-                db.commit()
+                session_slots = available_slots
 
             # Persist assistant reply
             db.add(Message(
