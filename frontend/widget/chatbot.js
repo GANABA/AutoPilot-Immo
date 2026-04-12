@@ -4,8 +4,10 @@
  * Usage:
  *   <script src="chatbot.js" data-api="http://localhost:8000"></script>
  *
- * The script is self-initializing. It injects the CSS (if not already loaded),
- * builds the DOM, and manages the WebSocket connection.
+ * Features:
+ * - Self-initializing, injects CSS and builds DOM
+ * - Persists conversation in localStorage so returning visitors see history
+ * - Skips welcome message on reconnect to avoid repetition
  */
 (function () {
   "use strict";
@@ -19,7 +21,36 @@
     (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
       ? 'http://localhost:8000'
       : window.location.origin);
-  const WS_BASE = API_BASE.replace(/^http/, "ws"); // transform http:// to ws:// and https:// to wss://
+  const WS_BASE = API_BASE.replace(/^http/, "ws");
+
+  // Sessions expire after 30 days
+  const SESSION_KEY = 'ap_immo_session';
+  const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+  // ── Session persistence ─────────────────────────────────────────────────────
+  function loadSession() {
+    try {
+      const raw = localStorage.getItem(SESSION_KEY);
+      if (!raw) return null;
+      const s = JSON.parse(raw);
+      if (!s || !s.conversationId) return null;
+      if (Date.now() - (s.ts || 0) > SESSION_TTL_MS) {
+        localStorage.removeItem(SESSION_KEY);
+        return null;
+      }
+      return s;
+    } catch { return null; }
+  }
+
+  function saveSession(conversationId) {
+    try {
+      localStorage.setItem(SESSION_KEY, JSON.stringify({ conversationId, ts: Date.now() }));
+    } catch {}
+  }
+
+  function clearSession() {
+    try { localStorage.removeItem(SESSION_KEY); } catch {}
+  }
 
   // ── Load marked.js for markdown rendering ───────────────────────────────────
   function loadMarked() {
@@ -28,18 +59,15 @@
       const s = document.createElement("script");
       s.src = "https://cdn.jsdelivr.net/npm/marked@9/marked.min.js";
       s.onload = resolve;
-      s.onerror = resolve; // graceful fallback
+      s.onerror = resolve;
       document.head.appendChild(s);
     });
   }
 
   function renderMarkdown(text) {
     if (window.marked) {
-      try {
-        return window.marked.parse(text, { breaks: true, gfm: true });
-      } catch (_) {}
+      try { return window.marked.parse(text, { breaks: true, gfm: true }); } catch (_) {}
     }
-    // Fallback: escape HTML and preserve line breaks
     return text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>");
   }
 
@@ -49,18 +77,13 @@
     const link = document.createElement("link");
     link.id = "ap-widget-css";
     link.rel = "stylesheet";
-    link.href = API_BASE + "/static/chatbot.css";
-    // Fallback: look for chatbot.css next to the script
     const scriptSrc = currentScript && currentScript.src;
-    if (scriptSrc) {
-      link.href = scriptSrc.replace("chatbot.js", "chatbot.css");
-    }
+    link.href = scriptSrc ? scriptSrc.replace("chatbot.js", "chatbot.css") : API_BASE + "/static/chatbot.css";
     document.head.appendChild(link);
   }
 
   // ── Build DOM ───────────────────────────────────────────────────────────────
   function buildDOM() {
-    // Toggle button
     const btn = document.createElement("button");
     btn.id = "ap-widget-btn";
     btn.setAttribute("aria-label", "Ouvrir le chat");
@@ -69,7 +92,6 @@
         <path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/>
       </svg>`;
 
-    // Chat panel
     const panel = document.createElement("div");
     panel.id = "ap-chat-panel";
     panel.classList.add("ap-hidden");
@@ -112,16 +134,16 @@
     const { btn, panel } = buildDOM();
 
     const messagesEl = document.getElementById("ap-messages");
-    const inputEl = document.getElementById("ap-input");
-    const sendBtn = document.getElementById("ap-send");
-    const closeBtn = document.getElementById("ap-chat-close");
+    const inputEl    = document.getElementById("ap-input");
+    const sendBtn    = document.getElementById("ap-send");
+    const closeBtn   = document.getElementById("ap-chat-close");
 
-    let ws = null;
+    let ws             = null;
     let conversationId = null;
-    let isOpen = false;
-    let typingEl = null;
+    let isOpen         = false;
+    let typingEl       = null;
 
-    // ── Helpers ────────────────────────────────────────────────────────────
+    // ── Message rendering ──────────────────────────────────────────────────
     function appendMessage(role, text) {
       removeTyping();
       const div = document.createElement("div");
@@ -174,10 +196,7 @@
     }
 
     function removeTyping() {
-      if (typingEl) {
-        typingEl.remove();
-        typingEl = null;
-      }
+      if (typingEl) { typingEl.remove(); typingEl = null; }
     }
 
     function setInputEnabled(enabled) {
@@ -185,27 +204,12 @@
       sendBtn.disabled = !enabled;
     }
 
-    // ── WebSocket ──────────────────────────────────────────────────────────
-    async function connect() {
-      setInputEnabled(false);
-
-      // Create conversation via REST
-      try {
-        const res = await fetch(API_BASE + "/chat/conversations", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({}),
-        });
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        const data = await res.json();
-        conversationId = data.id;
-      } catch (err) {
-        appendMessage("error", "Impossible de démarrer la conversation. Réessayez.");
-        return;
-      }
-
-      // Open WebSocket
+    // ── WebSocket setup ────────────────────────────────────────────────────
+    function setupWS(isReturning) {
       ws = new WebSocket(WS_BASE + "/chat/ws/" + conversationId);
+
+      // On reconnect, server sends a welcome — skip it to avoid repetition
+      let skipNextWelcome = isReturning;
 
       ws.onopen = () => {
         setInputEnabled(true);
@@ -214,14 +218,22 @@
 
       ws.onmessage = (event) => {
         const msg = JSON.parse(event.data);
+
         if (msg.type === "typing") {
           showTyping();
         } else if (msg.type === "properties") {
           appendPropertyCards(msg.items);
         } else if (msg.type === "assistant") {
+          if (skipNextWelcome) {
+            skipNextWelcome = false; // skip only the first message (welcome)
+            return;
+          }
           appendMessage("assistant", msg.content);
+          setInputEnabled(true);
+          inputEl.focus();
         } else if (msg.type === "error") {
           appendMessage("error", msg.content);
+          setInputEnabled(true);
         }
       };
 
@@ -236,12 +248,63 @@
       };
     }
 
-    function disconnect() {
-      if (ws) {
-        ws.close();
-        ws = null;
+    // ── Connect (with localStorage resume) ────────────────────────────────
+    async function connect() {
+      setInputEnabled(false);
+      let isReturning = false;
+
+      // Try to resume an existing session
+      const session = loadSession();
+      if (session) {
+        try {
+          const res = await fetch(API_BASE + "/chat/conversations/" + session.conversationId + "/messages");
+          if (res.ok) {
+            const messages = await res.json();
+            conversationId = session.conversationId;
+            isReturning = messages.length > 0;
+
+            // Render existing history (skip system messages)
+            messages.forEach(m => {
+              if (m.role === "user" || m.role === "assistant") {
+                appendMessage(m.role, m.content);
+              }
+            });
+
+            // Separator if history was loaded
+            if (isReturning) {
+              const sep = document.createElement("div");
+              sep.className = "ap-msg ap-separator";
+              sep.textContent = "— Reprise de la conversation —";
+              messagesEl.appendChild(sep);
+              messagesEl.scrollTop = messagesEl.scrollHeight;
+            }
+          } else {
+            clearSession();
+          }
+        } catch {
+          clearSession();
+        }
       }
-      conversationId = null;
+
+      // No valid session — create new conversation
+      if (!conversationId) {
+        try {
+          const res = await fetch(API_BASE + "/chat/conversations", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({}),
+          });
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          const data = await res.json();
+          conversationId = data.id;
+          saveSession(conversationId);
+        } catch {
+          appendMessage("error", "Impossible de démarrer la conversation. Réessayez.");
+          return;
+        }
+      }
+
+      setupWS(isReturning);
     }
 
     // ── Send message ───────────────────────────────────────────────────────
@@ -253,26 +316,7 @@
       ws.send(JSON.stringify({ content: text }));
       inputEl.value = "";
       inputEl.style.height = "40px";
-      setInputEnabled(false); // re-enabled when response arrives
-    }
-
-    // Re-enable input after assistant replies
-    const _origOnMessage = null;
-    ws; // will be set in connect()
-
-    // Patch: re-enable input after each assistant message
-    function patchWsOnMessage() {
-      if (!ws) return;
-      const originalOnMessage = ws.onmessage;
-      ws.onmessage = (event) => {
-        originalOnMessage(event);
-        const msg = JSON.parse(event.data);
-        if (msg.type === "assistant" || msg.type === "error") {
-          setInputEnabled(true);
-          inputEl.focus();
-        }
-        // properties cards don't re-enable input (assistant message follows)
-      };
+      setInputEnabled(false);
     }
 
     // ── Panel toggle ───────────────────────────────────────────────────────
@@ -281,10 +325,10 @@
       panel.classList.remove("ap-hidden");
       btn.setAttribute("aria-expanded", "true");
 
-      if (!ws || ws.readyState === WebSocket.CLOSED) {
-        // Clear previous messages
+      if (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
         messagesEl.innerHTML = "";
-        connect().then(() => patchWsOnMessage());
+        conversationId = null;
+        connect();
       }
     }
 
@@ -297,12 +341,11 @@
     btn.addEventListener("click", () => (isOpen ? closePanel() : openPanel()));
     closeBtn.addEventListener("click", closePanel);
 
-    // Auto-open after 2.5s to greet the visitor
+    // Auto-open after 2.5s
     setTimeout(() => { if (!isOpen) openPanel(); }, 2500);
 
     // ── Input events ───────────────────────────────────────────────────────
     inputEl.addEventListener("input", () => {
-      // Auto-resize textarea
       inputEl.style.height = "40px";
       inputEl.style.height = Math.min(inputEl.scrollHeight, 100) + "px";
     });

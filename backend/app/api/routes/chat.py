@@ -189,7 +189,12 @@ async def chat_websocket(websocket: WebSocket, conversation_id: UUID):
             try:
                 result = await asyncio.to_thread(
                     agent.run,
-                    {"message": user_message, "history": history, "available_slots": prior_slots},
+                    {
+                        "message": user_message,
+                        "history": history,
+                        "available_slots": prior_slots,
+                        "contact_captured": bool(conv.prospect_email),
+                    },
                     db,
                 )
             except Exception as exc:

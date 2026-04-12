@@ -185,6 +185,16 @@
   border-bottom-left-radius: 4px;
 }
 
+.ap-msg.ap-separator {
+  align-self: center;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 11px;
+  padding: 4px 8px;
+  max-width: 100%;
+  text-align: center;
+}
+
 .ap-typing {
   align-self: flex-start;
   background: #f1f5f9;

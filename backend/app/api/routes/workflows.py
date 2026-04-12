@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user, get_db
-from app.database.models import Property, Tenant
+from app.database.models import Property, Tenant, Conversation
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -91,3 +91,31 @@ async def trigger_new_property(
             errors=[],
             status="queued",
         )
+
+
+@router.post(
+    "/trigger_followups",
+    summary="Manually trigger J+7 follow-up emails for all eligible prospects",
+)
+async def trigger_followups(
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Sends follow-up emails to prospects who:
+    - Have a known email address
+    - Have not booked a visit
+    - Have a conversation older than 7 days
+    - Have not already received a follow-up
+
+    Normally runs automatically every day at 09:00 via Celery Beat.
+    This endpoint allows manual triggering from the dashboard or for testing.
+    """
+    from app.tasks.followup_tasks import send_followup_drafts
+
+    try:
+        result = await asyncio.to_thread(send_followup_drafts)
+        return {"status": "done", **result}
+    except Exception as exc:
+        logger.error("trigger_followups failed: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(exc))

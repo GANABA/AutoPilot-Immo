@@ -33,6 +33,7 @@ class SupportState(TypedDict):
     available_slots: list       # calendar slots offered to prospect
     booked_slot: dict           # confirmed slot {"label":..., "datetime":...} or {}
     booking_intent: bool        # True if user expressed intent to visit
+    contact_captured: bool      # True if prospect email is already known
 
 
 _BOOKING_SYSTEM = (
@@ -68,7 +69,9 @@ Règles :
 Biens disponibles correspondant à la recherche :
 {properties_context}
 
-{slots_context}"""
+{slots_context}
+
+{contact_context}"""
 
 
 def _match_slot(text: str, slots: list[dict]) -> dict | None:
@@ -249,11 +252,29 @@ class SupportAgent(BaseAgent):
             labels = "\n".join(f"- {s['display']}" for s in state["available_slots"][:5])
             slots_context = f"Créneaux disponibles pour une visite :\n{labels}"
 
+        # Build contact collection nudge
+        contact_context = ""
+        if not state.get("contact_captured"):
+            props_found = bool(state.get("matched_properties"))
+            booking = state.get("booking_intent", False)
+            history_len = len(state.get("history", []))
+            if (props_found or booking) and history_len < 8:
+                contact_context = (
+                    "IMPORTANT — Collecte contact : Vous ne connaissez pas encore les coordonnées du prospect. "
+                    "À la fin de cette réponse, demandez-lui en une phrase chaleureuse son prénom et son adresse email "
+                    "pour lui envoyer ces résultats et le tenir informé des nouveaux biens correspondants. "
+                    "Exemple : « Pour vous envoyer ces résultats et vous alerter des nouvelles opportunités, "
+                    "pourriez-vous me laisser votre prénom et votre email ? »"
+                )
+        else:
+            contact_context = "Note : coordonnées prospect déjà enregistrées — ne redemandez pas ses informations."
+
         # Use replace() instead of format() — property descriptions may contain braces
         system = (
             _SUPPORT_SYSTEM
             .replace("{properties_context}", state["properties_context"])
             .replace("{slots_context}", slots_context)
+            .replace("{contact_context}", contact_context)
         )
         messages: list[dict] = [{"role": "system", "content": system}]
         messages.extend(state.get("history", []))
@@ -300,6 +321,7 @@ class SupportAgent(BaseAgent):
             "available_slots": input_data.get("available_slots", []),
             "booked_slot": {},
             "booking_intent": False,
+            "contact_captured": input_data.get("contact_captured", False),
         }
         result = self._graph.invoke(state)
 
