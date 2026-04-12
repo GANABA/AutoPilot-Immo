@@ -232,9 +232,11 @@ class SupportAgent(BaseAgent):
             labels = "\n".join(f"- {s['display']}" for s in state["available_slots"][:5])
             slots_context = f"Créneaux disponibles pour une visite :\n{labels}"
 
-        system = _SUPPORT_SYSTEM.format(
-            properties_context=state["properties_context"],
-            slots_context=slots_context,
+        # Use replace() instead of format() — property descriptions may contain braces
+        system = (
+            _SUPPORT_SYSTEM
+            .replace("{properties_context}", state["properties_context"])
+            .replace("{slots_context}", slots_context)
         )
         messages: list[dict] = [{"role": "system", "content": system}]
         messages.extend(state.get("history", []))

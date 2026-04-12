@@ -183,26 +183,22 @@ async def chat_websocket(websocket: WebSocket, conversation_id: UUID):
             prior_slots = conv_meta.get("available_slots", [])
 
             # Run blocking agent in thread pool
+            result = {}
             try:
                 result = await asyncio.to_thread(
                     agent.run,
                     {"message": user_message, "history": history, "available_slots": prior_slots},
                     db,
                 )
-                response_text = result["response"]
-                property_cards = result.get("property_cards", [])
-                detected_email = result.get("detected_email", "")
-                detected_name = result.get("detected_name", "")
-                available_slots = result.get("available_slots", [])
-                booked_slot = result.get("booked_slot", {})
             except Exception as exc:
                 logger.error("SupportAgent error: %s", exc, exc_info=True)
-                response_text = "Désolé, une erreur s'est produite. Veuillez réessayer."
-                property_cards = []
-                detected_email = ""
-                detected_name = ""
-                available_slots = []
-                booked_slot = {}
+
+            response_text = result.get("response") or "Désolé, une erreur s'est produite. Veuillez réessayer."
+            property_cards = result.get("property_cards", [])
+            detected_email = result.get("detected_email", "")
+            detected_name = result.get("detected_name", "")
+            available_slots = result.get("available_slots", [])
+            booked_slot = result.get("booked_slot", {})
 
             # Persist search criteria on conversation for orchestrator matching
             if result.get("criteria"):
