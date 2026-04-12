@@ -172,6 +172,14 @@ class SupportAgent(BaseAgent):
 
     def _handle_booking(self, state: SupportState) -> dict:
         """Node 4 — detect booking intent, fetch slots, or confirm a visit."""
+        _safe_return = {"booking_intent": False, "available_slots": state.get("available_slots") or [], "booked_slot": {}}
+        try:
+            return self._handle_booking_inner(state)
+        except Exception as exc:
+            logger.error("_handle_booking crashed (non-fatal): %s", exc, exc_info=True)
+            return _safe_return
+
+    def _handle_booking_inner(self, state: SupportState) -> dict:
         from app.services.calendar_service import get_available_slots, create_visit_event
 
         # Detect booking intent / slot confirmation via LLM
@@ -193,27 +201,34 @@ class SupportAgent(BaseAgent):
         booking_intent = bool(booking_data.get("booking_intent"))
         slot_confirmation = booking_data.get("slot_confirmation")
 
-        available_slots = state.get("available_slots") or []
+        available_slots = list(state.get("available_slots") or [])
         booked_slot: dict = {}
 
         # Case 1: user confirms a slot → create the calendar event
         if slot_confirmation and available_slots:
             matched = _match_slot(slot_confirmation, available_slots)
             if matched:
-                event_id = create_visit_event(
-                    slot_datetime=matched["datetime"],
-                    prospect_name=state.get("detected_name") or "Prospect",
-                    prospect_email=state.get("detected_email") or "",
-                    property_title=_first_property_title(state),
-                    agent_email="contact@immoplus.fr",
-                )
+                try:
+                    event_id = create_visit_event(
+                        slot_datetime=matched["datetime"],
+                        prospect_name=state.get("detected_name") or "Prospect",
+                        prospect_email=state.get("detected_email") or "",
+                        property_title=_first_property_title(state),
+                        agent_email="contact@immoplus.fr",
+                    )
+                except Exception as exc:
+                    logger.error("create_visit_event failed: %s", exc, exc_info=True)
+                    event_id = None
                 booked_slot = {**matched, "event_id": event_id or ""}
                 logger.info("Booking confirmed: %s → event %s", matched["label"], event_id)
 
         # Case 2: booking intent with no prior slots → fetch available slots
         elif booking_intent and not available_slots:
-            available_slots = get_available_slots()
-            logger.info("Booking intent detected — fetched %d slots", len(available_slots))
+            try:
+                available_slots = get_available_slots()
+                logger.info("Booking intent detected — fetched %d slots", len(available_slots))
+            except Exception as exc:
+                logger.error("get_available_slots failed: %s", exc, exc_info=True)
 
         return {
             "booking_intent": booking_intent,
