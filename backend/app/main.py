@@ -9,7 +9,7 @@ from sqlalchemy import text
 
 from app.config import settings
 from app.database.connection import Base, SessionLocal, engine
-from app.api.routes import auth, properties, chat, listings, documents, voice, stats
+from app.api.routes import auth, properties, chat, listings, documents, voice, stats, workflows
 
 logger = logging.getLogger(__name__)
 
@@ -104,6 +104,7 @@ app.include_router(listings.router, prefix="/listings", tags=["listings"])
 app.include_router(documents.router, prefix="/documents", tags=["documents"])
 app.include_router(voice.router, prefix="/voice", tags=["voice"])
 app.include_router(stats.router, prefix="/stats", tags=["system"])
+app.include_router(workflows.router, prefix="/workflows", tags=["workflows"])
 
 
 @app.get("/health", tags=["system"])

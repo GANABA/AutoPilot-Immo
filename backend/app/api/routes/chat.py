@@ -204,6 +204,11 @@ async def chat_websocket(websocket: WebSocket, conversation_id: UUID):
                 available_slots = []
                 booked_slot = {}
 
+            # Persist search criteria on conversation for orchestrator matching
+            if result.get("criteria"):
+                conv.search_criteria = result["criteria"]
+                db.commit()
+
             # Update conversation with contact info if newly detected
             if detected_email and not conv.prospect_email:
                 conv.prospect_email = detected_email

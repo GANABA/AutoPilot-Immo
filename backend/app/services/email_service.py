@@ -236,6 +236,105 @@ def send_visit_confirmation(
     )
 
 
+def send_new_property_notification(
+    prospect_name: str,
+    prospect_email: str,
+    property_card: dict,
+) -> bool:
+    """Email sent to a matching prospect when a new property is added."""
+    first_name = prospect_name.split()[0] if prospect_name else "vous"
+    prop_row = _property_row(property_card)
+
+    body = f"""
+    <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 16px;">
+      Bonjour <strong>{first_name}</strong>,
+    </p>
+    <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 24px;">
+      Bonne nouvelle ! Un nouveau bien vient d'être mis en vente chez ImmoPlus
+      et il correspond à vos critères de recherche.
+    </p>
+    <table width="100%" cellpadding="0" cellspacing="0">{prop_row}</table>
+    <br>
+    <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 32px;">
+      Ce bien pourrait partir rapidement. N'hésitez pas à nous contacter
+      pour organiser une visite dès cette semaine.
+    </p>
+    <a href="mailto:contact@immoplus.fr?subject=Visite%20-%20{property_card.get('title', '')}"
+       style="display:inline-block;background:#1a1a2e;color:#ffffff;text-decoration:none;
+              padding:14px 28px;border-radius:8px;font-size:14px;font-weight:600;">
+      Organiser une visite
+    </a>"""
+
+    return send_email(
+        to=prospect_email,
+        subject=f"Nouveau bien correspondant à votre recherche — {property_card.get('city', 'Lyon')}",
+        html=_base_html("Un bien pour vous vient d'arriver", body),
+    )
+
+
+def send_orchestrator_summary(
+    agent_email: str,
+    property_title: str,
+    property_city: str,
+    documents_analyzed: int,
+    listings_generated: list[str],
+    prospects_notified: int,
+    duration_s: float,
+    errors: list[str],
+) -> bool:
+    """Summary email sent to the agent after the orchestrator workflow completes."""
+    platforms_html = "".join(
+        f'<span style="display:inline-block;background:#e2e8f0;color:#475569;'
+        f'padding:4px 10px;border-radius:4px;font-size:12px;margin:2px;">{p}</span>'
+        for p in listings_generated
+    ) or '<span style="color:#94a3b8;font-size:13px;">Aucune</span>'
+
+    errors_html = ""
+    if errors:
+        err_list = "".join(f"<li style='color:#ef4444;font-size:13px;'>{e}</li>" for e in errors)
+        errors_html = f"""
+        <p style="margin:16px 0 8px;color:#1a1a2e;font-size:14px;font-weight:600;">Erreurs :</p>
+        <ul style="margin:0;padding-left:20px;">{err_list}</ul>"""
+
+    body = f"""
+    <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 24px;">
+      Le workflow de mise en ligne s'est terminé en <strong>{duration_s}s</strong>.
+    </p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:8px;margin:0 0 24px;">
+      <tr><td style="padding:24px;">
+        <p style="margin:0 0 12px;color:#1a1a2e;font-size:15px;">
+          <strong>Bien :</strong> {property_title} — {property_city}
+        </p>
+        <p style="margin:0 0 12px;color:#1a1a2e;font-size:15px;">
+          <strong>Documents analysés :</strong> {documents_analyzed}
+        </p>
+        <p style="margin:0 0 12px;color:#1a1a2e;font-size:15px;">
+          <strong>Annonces générées :</strong> {platforms_html}
+        </p>
+        <p style="margin:0;color:#1a1a2e;font-size:15px;">
+          <strong>Prospects notifiés :</strong> {prospects_notified}
+        </p>
+      </td></tr>
+    </table>
+    {errors_html}
+    <a href="{{}}"
+       style="display:inline-block;background:#1a1a2e;color:#ffffff;text-decoration:none;
+              padding:14px 28px;border-radius:8px;font-size:14px;font-weight:600;">
+      Voir le tableau de bord
+    </a>"""
+
+    # Inject public URL for the dashboard link
+    from app.config import settings
+    dashboard_url = f"{settings.PUBLIC_URL.rstrip('/')}/dashboard/"
+    body = body.replace("{{}}", dashboard_url)
+
+    return send_email(
+        to=agent_email,
+        subject=f"Workflow terminé — {property_title} ({prospects_notified} prospects contactés)",
+        html=_base_html(f"Mise en ligne de « {property_title} » terminée", body),
+    )
+
+
 def send_prospect_followup(
     prospect_name: str,
     prospect_email: str,
