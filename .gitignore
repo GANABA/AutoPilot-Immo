@@ -36,8 +36,9 @@ frontend/dashboard/dist/
 .DS_Store
 Thumbs.db
 
-# Claude Code
-.claude/
+# Claude Code — ignore local settings, commit agents/skills/CLAUDE.md
+.claude/settings.local.json
+.claude/__pycache__/
 
 # Alembic — keep migrations, ignore pyc
 alembic/versions/__pycache__/
