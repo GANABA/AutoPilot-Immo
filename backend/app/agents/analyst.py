@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.agents.base import BaseAgent
 from app.config import settings
-from app.database.models import Document
+from app.database.models import Document, Property
 
 logger = logging.getLogger(__name__)
 
@@ -22,18 +22,20 @@ class AnalystState(TypedDict):
     document_id: str
     file_path: str        # absolute path to PDF on disk
     raw_text: str         # text extracted from PDF
-    doc_type: str         # dpe | copro | mandat | other
+    doc_type: str         # dpe | copro | mandat | diagnostic | other
     extracted_data: dict  # structured extraction result
     page_count: int
+    enrich_property: bool # True = apply extracted fields to parent Property
 
 
 # ── Extraction prompts per document type ─────────────────────────────────────
 
 _CLASSIFY_PROMPT = """Classifie ce document immobilier parmi les types suivants :
-- dpe       : Diagnostic de Performance Énergétique
-- copro     : Documents de copropriété (procès-verbal, charges, règlement)
-- mandat    : Mandat de vente ou location
-- other     : Autre document immobilier
+- dpe        : Diagnostic de Performance Énergétique
+- copro      : Documents de copropriété (procès-verbal, charges, règlement)
+- mandat     : Mandat de vente ou location
+- diagnostic : Diagnostic technique (plomb, amiante, électricité, gaz, termites...)
+- other      : Autre document immobilier
 
 Réponds UNIQUEMENT avec le type en minuscules (ex: dpe).
 
@@ -82,6 +84,21 @@ Réponds UNIQUEMENT avec un JSON valide :
   "start_date": "YYYY-MM-DD ou null",
   "end_date": "YYYY-MM-DD ou null",
   "property_address": "texte ou null"
+}
+
+Document :
+{text}""",
+
+    "diagnostic": """Extrais les résultats de ces diagnostics techniques immobiliers.
+Réponds UNIQUEMENT avec un JSON valide :
+{
+  "lead_paint": "conforme | non_conforme | non_applicable | null",
+  "asbestos": "absence | présence | null",
+  "electrical": "conforme | non_conforme | null",
+  "gas": "conforme | non_conforme | non_applicable | null",
+  "termites": "absence | présence | null",
+  "flood_risk": "faible | moyen | élevé | null",
+  "surface_loi_carrez": number ou null
 }
 
 Document :
@@ -183,7 +200,7 @@ class AnalystAgent(BaseAgent):
         return {"extracted_data": extracted}
 
     def _save_results(self, state: AnalystState) -> dict:
-        """Node 4 — persist results to Document record."""
+        """Node 4 — persist results to Document record and optionally enrich Property."""
         db: Session = state["db"]
         doc = db.query(Document).filter_by(id=state["document_id"]).first()
         if doc:
@@ -197,7 +214,67 @@ class AnalystAgent(BaseAgent):
             }
             doc.status = "done"
             db.commit()
+
+            # Incremental enrichment: apply extracted fields to parent Property
+            # Only fills null fields — never overwrites existing values
+            if state.get("enrich_property") and doc.property_id:
+                self._enrich_property(db, doc)
+
         return {}
+
+    def _enrich_property(self, db: Session, doc: Document) -> None:
+        """Apply extracted data to the parent Property, skipping fields already set."""
+        prop = db.query(Property).filter_by(id=doc.property_id).first()
+        if not prop:
+            return
+
+        data = doc.extracted_data or {}
+        updated = False
+
+        def _set(field: str, value):
+            nonlocal updated
+            if value is not None and getattr(prop, field, None) in (None, "", 0, False):
+                setattr(prop, field, value)
+                updated = True
+
+        if doc.doc_type == "dpe":
+            _set("energy_class", data.get("energy_class"))
+            _set("ges_class", data.get("ges_class"))
+            _set("annual_energy_cost", data.get("energy_consumption_kwh"))  # best proxy
+            if data.get("surface_reference") and not prop.surface:
+                _set("surface", data["surface_reference"])
+
+        elif doc.doc_type == "copro":
+            annual = data.get("annual_charges")
+            if annual and not prop.charges_monthly:
+                prop.charges_monthly = round(annual / 12, 2)
+                updated = True
+            _set("lot_count", data.get("number_of_lots"))
+            _set("syndic_name", data.get("syndic_name"))
+
+        elif doc.doc_type == "mandat":
+            _set("price", data.get("property_price"))
+            _set("mandate_ref", data.get("mandate_ref"))
+            _set("mandate_type", data.get("mandate_type"))
+            _set("agency_fees_percent", data.get("agency_commission_pct"))
+            if data.get("property_address") and not prop.address:
+                _set("address", data["property_address"])
+
+        elif doc.doc_type == "diagnostic":
+            # Merge into diagnostics JSON (never overwrites, only fills missing keys)
+            diag = dict(prop.diagnostics or {})
+            for key in ("lead_paint", "asbestos", "electrical", "gas", "termites", "flood_risk"):
+                if key not in diag and data.get(key) is not None:
+                    diag[key] = data[key]
+            if diag != (prop.diagnostics or {}):
+                prop.diagnostics = diag
+                updated = True
+            if data.get("surface_loi_carrez") and not prop.surface:
+                _set("surface", data["surface_loi_carrez"])
+
+        if updated:
+            db.commit()
+            logger.info("Property %s enriched from %s document", prop.id, doc.doc_type)
 
     def _build_graph(self):
         g = StateGraph(AnalystState)
@@ -223,6 +300,7 @@ class AnalystAgent(BaseAgent):
             "doc_type": "other",
             "extracted_data": {},
             "page_count": 0,
+            "enrich_property": input_data.get("enrich_property", True),
         }
         result = self._graph.invoke(state)
         return {

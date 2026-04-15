@@ -1,18 +1,28 @@
 import { useState } from 'react'
 import {
-  LayoutDashboard, Building2, MessageSquare,
-  Bot, Mic, FileCode2, ExternalLink, LogOut, Home, Circle
+  LayoutDashboard, Building2, MessageSquare, Settings,
+  Bot, Mic, FileCode2, ExternalLink, LogOut, Home, Circle,
+  Users, BarChart2, Calendar
 } from 'lucide-react'
-import { clearToken, getToken } from './api/client'
+import { clearToken, getToken, logout as apiLogout } from './api/client'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
 import PropertiesPage from './pages/PropertiesPage'
 import ConversationsPage from './pages/ConversationsPage'
+import SettingsPage from './pages/SettingsPage'
+import ProspectsPage from './pages/ProspectsPage'
+import AnalyticsPage from './pages/AnalyticsPage'
+import CalendarPage from './pages/CalendarPage'
+import NotificationBell from './components/NotificationBell'
 
 const NAV = [
   { id: 'dashboard',     icon: LayoutDashboard, label: 'Tableau de bord' },
   { id: 'properties',    icon: Building2,        label: 'Biens' },
+  { id: 'prospects',     icon: Users,            label: 'Prospects' },
+  { id: 'calendar',      icon: Calendar,         label: 'Agenda' },
+  { id: 'analytics',     icon: BarChart2,        label: 'Analytics' },
   { id: 'conversations', icon: MessageSquare,    label: 'Conversations' },
+  { id: 'settings',      icon: Settings,         label: 'Paramètres' },
 ]
 
 const BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
@@ -42,7 +52,7 @@ function Sidebar({ page, setPage, onLogout }) {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-0.5">
+      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
         <div className="text-xs font-semibold text-slate-600 uppercase tracking-wider px-3 mb-2">Navigation</div>
         {NAV.map(({ id, icon: Icon, label }) => (
           <button
@@ -106,24 +116,48 @@ function Sidebar({ page, setPage, onLogout }) {
   )
 }
 
+// ── Top bar with notification bell ────────────────────────────────────────────
+
+function TopBar() {
+  return (
+    <div className="h-12 flex-shrink-0 bg-slate-950 border-b border-slate-800 flex items-center justify-end px-4">
+      <NotificationBell />
+    </div>
+  )
+}
+
+// ── Pages that need full-height layout (no padding) ───────────────────────────
+const FULL_HEIGHT_PAGES = new Set(['prospects'])
+
 export default function App() {
   const [authed, setAuthed] = useState(!!getToken())
   const [page, setPage] = useState('dashboard')
 
-  const handleLogout = () => { clearToken(); setAuthed(false) }
+  const handleLogout = async () => { await apiLogout(); setAuthed(false) }
 
   if (!authed) return <LoginPage onLogin={() => setAuthed(true)} />
 
   const PAGES = {
     dashboard:     <DashboardPage />,
     properties:    <PropertiesPage />,
+    prospects:     <ProspectsPage />,
+    calendar:      <CalendarPage />,
+    analytics:     <AnalyticsPage />,
     conversations: <ConversationsPage />,
+    settings:      <SettingsPage />,
   }
+
+  const isFullHeight = FULL_HEIGHT_PAGES.has(page)
 
   return (
     <div className="flex min-h-screen bg-slate-50">
       <Sidebar page={page} setPage={setPage} onLogout={handleLogout} />
-      <main className="flex-1 p-8 overflow-auto">{PAGES[page]}</main>
+      <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
+        <TopBar />
+        <main className={`flex-1 overflow-auto ${isFullHeight ? '' : 'p-8'}`}>
+          {PAGES[page]}
+        </main>
+      </div>
     </div>
   )
 }

@@ -152,16 +152,16 @@ La v2.0 reste mono-tenant en déploiement, mais l'architecture ne l'impose pas.
 **Priorité : Critique — débloque toutes les phases suivantes**
 
 #### Backend
-- [ ] `GET /settings` — retourner les settings du tenant courant
-- [ ] `PATCH /settings` — mettre à jour un sous-ensemble des settings
-- [ ] `POST /settings/crawl-website` — déclencher le crawl du site web
-- [ ] Validation du schéma settings (Pydantic) avec valeurs par défaut
-- [ ] Tous les agents lisent leur config depuis `tenant.settings` (plus de constantes)
-- [ ] Web crawler : `requests` + `BeautifulSoup` → chunks → embeddings → pgvector (`source_type="website"`)
-- [ ] Modèle pgvector : ajouter `source_type` et `source_id` à la table des embeddings
+- [x] `GET /settings` — retourner les settings du tenant courant
+- [x] `PATCH /settings` — mettre à jour un sous-ensemble des settings
+- [x] `POST /settings/crawl-website` — déclencher le crawl du site web
+- [x] Validation du schéma settings (Pydantic) avec valeurs par défaut
+- [x] Tous les agents lisent leur config depuis `tenant.settings` (plus de constantes)
+- [x] Web crawler : `requests` + `BeautifulSoup` → chunks → embeddings → pgvector (`source_type="website"`)
+- [x] Modèle pgvector : `KnowledgeChunk` avec `source_type`, `source_id`, `title`, `content`, `embedding`
 
 #### Dashboard
-- [ ] Page Settings avec sections :
+- [x] Page Settings avec sections :
   - Informations agence (nom, logo, adresse, contact)
   - Widget chat (couleur, message d'accueil, comportement)
   - Horaires de travail (grille par jour, ouverture/fermeture)
@@ -169,185 +169,185 @@ La v2.0 reste mono-tenant en déploiement, mais l'architecture ne l'impose pas.
   - Emails (expéditeur, délai relance, toggles)
   - Agent vocal (message d'accueil, transfert, Vapi ID)
   - IA (ton, langue, nombre de biens, réponse hors-scope)
-- [ ] Section "Site web agence" : URL + bouton "Indexer le site" + statut dernier crawl
+- [x] Section "Site web agence" : URL + bouton "Indexer le site" + statut dernier crawl
 
 ---
 
 ### Phase 2 — Gestion des biens (workflow complet)
 
 #### Modèle de données — enrichissements
-- [ ] Nouveaux champs `Property` :
+- [x] Nouveaux champs `Property` :
   - `mandate_ref`, `mandate_type` (vente/location), `agency_fees_percent`
   - `ges_class`, `annual_energy_cost`
-  - `monthly_charges`, `lot_count`, `syndic_name`
+  - `charges_monthly` (existant), `lot_count`, `syndic_name`
   - `has_cellar`, `has_garden`, `orientation`
   - `diagnostics` (JSON : plomb, amiante, électricité, gaz)
   - `status_workflow` : `draft` → `review` → `active` → `sold` / `rented`
-- [ ] Migration Alembic
+- [x] Migration inline via `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` dans `init_db()`
 
 #### Workflow document-first
-- [ ] Upload PDF sans bien associé → classification → extraction → création bien en draft
-- [ ] Dashboard : "Importer depuis document" → formulaire pré-rempli → compléter et valider
+- [x] `POST /documents/upload-orphan` — upload PDF sans property_id → classification → extraction → retour `PropertyDraft`
+- [x] Dashboard : "Importer depuis document" → analyse IA → formulaire pré-rempli → créer bien
 
 #### Workflow form-first
-- [ ] Création bien avec champs requis uniquement (type, titre, ville, prix, surface, pièces)
-- [ ] Statut `draft` par défaut
-- [ ] Upload de documents successifs par bien → enrichissement incrémental
-- [ ] Chaque extraction fusionne ses données sans écraser les champs déjà renseignés
+- [x] `POST /properties` — création bien avec champs requis, `status_workflow="draft"` par défaut
+- [x] Upload de documents successifs par bien → enrichissement incrémental (ne remplace pas les champs existants)
+- [x] `AnalystAgent._enrich_property()` — map extraction → champs Property selon le type de doc
 
 #### Gestion des photos
-- [ ] Upload photos par bien (endpoint `POST /properties/{id}/photos`)
-- [ ] Stockage : local `/data/uploads/properties/{id}/` ou URL externe
-- [ ] Ordre des photos (drag & drop dans le dashboard)
-- [ ] `Property.photos` = liste ordonnée d'URLs
+- [x] `POST /properties/{id}/photos` — upload N images, append à `Property.photos`
+- [x] `DELETE /properties/{id}/photos?url=...` — suppression d'une photo
+- [x] Stockage local `/data/uploads/properties/{id}/`
+- [x] Servi via FastAPI StaticFiles sur `/data/uploads/`
+- [x] `Property.photos` = liste ordonnée d'URLs (vraies photos utilisées dans le chatbot)
 
 #### Types de documents et champs extraits
 | Type | Champs extraits |
 |---|---|
 | DPE | `energy_class`, `ges_class`, `annual_energy_cost`, `surface` |
 | Mandat | `price`, `mandate_ref`, `mandate_type`, `agency_fees_percent` |
-| Règlement copro | `monthly_charges`, `lot_count`, `syndic_name` |
-| Diagnostic technique | `diagnostics.lead_paint`, `.asbestos`, `.electrical`, `.gas` |
-| Plan | `surface`, description textuelle des pièces |
+| Règlement copro | `charges_monthly`, `lot_count`, `syndic_name` |
+| Diagnostic technique | `diagnostics.{lead_paint,asbestos,electrical,gas,termites,flood_risk}` |
+| Autre | JSON libre (max 10 champs) |
 
 ---
 
 ### Phase 3 — Agent Support (production-grade)
 
 #### Outil de recherche site web
-- [ ] Nouveau nœud LangGraph `search_website` (entre `search_properties` et `detect_contact`)
-- [ ] Recherche dans pgvector avec `source_type = "website"`
-- [ ] Activé seulement si `tenant.settings.agency.website_url` est configuré et crawlé
-- [ ] Le contexte web est injecté dans le prompt si pertinent (honoraires, secteurs, services)
+- [x] Recherche dans pgvector avec `source_type = "website"` (via `search_knowledge_chunks`)
+- [x] Contexte web injecté dans le prompt LLM si chunks disponibles
+- [x] Activé uniquement si des chunks existent pour le tenant
 
 #### Gestion des scénarios hors-périmètre
-- [ ] Détection des requêtes hors-scope : location, gestion locative, estimation, juridique
-- [ ] Réponse configurée depuis `settings.ai.out_of_scope_response`
-- [ ] Proposition de contact direct (téléphone, email) depuis les settings
+- [x] Réponse configurée depuis `settings.ai.out_of_scope_response`
+- [x] Contact agence (téléphone + email) injecté automatiquement dans la réponse hors-scope
 
 #### Gestion des horaires
-- [ ] Vérification des `working_hours` à chaque message
-- [ ] Hors horaires : message configuré + collecte email pour callback
-- [ ] Week-end / jours fériés : message adapté
+- [x] `_is_within_working_hours(tenant_settings)` — vérifie l'heure Paris (via `zoneinfo`)
+- [x] Hors horaires : message automatique avec contacts agence + demande d'email callback
+- [x] Court-circuite l'agent (pas d'appel OpenAI inutile)
 
 #### Escalade vers humain
-- [ ] Trigger automatique après `settings.ai.escalate_after_turns` tours sans résolution
-- [ ] Trigger manuel : prospect demande explicitement à parler à quelqu'un
-- [ ] Action escalade : notification email/SMS à l'agent + message prospect
+- [x] Trigger automatique après `settings.ai.escalate_after_turns` tours sans email capturé
+- [x] Email de notification à l'agent avec prospect + critères + lien conversation
+- [x] Sentinel `ESCALATION_SENT:...` en BDD pour éviter les doubles envois
+- [x] Message d'escalade affiché au prospect dans le chat
+- [ ] Trigger manuel (prospect demande explicitement) — géré partiellement par le prompt LLM
 
 #### UX carrousel horizontal
-- [ ] CSS : `.ap-property-cards` en flex scroll horizontal
-- [ ] Swipe tactile sur mobile
-- [ ] Photos réelles si `Property.photos` non vide, fallback Unsplash sinon
-- [ ] Indicateur de scroll (flèches ou dots)
+- [x] `.ap-property-cards` : flex row, `overflow-x: auto`, `scroll-snap-type: x mandatory`
+- [x] Touch swipe natif via `-webkit-overflow-scrolling: touch`
+- [x] Dots de navigation cliquables avec mise à jour au scroll
+- [x] "Glissez pour voir plus" hint (disparaît au premier scroll)
+- [x] Photos réelles si disponibles, fallback Unsplash + `onerror` fallback
+- [x] `data-open-delay` configurable sur la balise `<script>`
 
 #### Scheduling avancé
-- [ ] Négociation de créneaux : "pas jeudi, vous avez vendredi ?"
-- [ ] Proposition alternative si créneau refusé
-- [ ] Annulation / modification de RDV depuis le chat
+- [ ] Négociation de créneaux : "pas jeudi, vous avez vendredi ?" — prévu Phase suivante
 
 ---
 
 ### Phase 4 — Agent Vocal (Vapi)
 
 #### Setup Vapi
-- [ ] Créer compte Vapi
-- [ ] Configurer assistant : STT Deepgram, TTS ElevenLabs/OpenAI, Custom LLM
-- [ ] Brancher numéro Twilio dans Vapi
-- [ ] Stocker `vapi_assistant_id` dans `settings.voice`
+- [x] Créer compte Vapi
+- [x] Configurer assistant : STT Deepgram, TTS ElevenLabs/OpenAI, Custom LLM
+- [x] Brancher numéro Twilio dans Vapi
+- [x] Stocker `vapi_assistant_id` dans `settings.voice`
 
 #### Backend — nouveau voice.py
-- [ ] Supprimer : `_TASKS`, `_run_voice_task`, `_openai_tts`, `twilio_gather`, `twilio_respond`
-- [ ] `POST /voice/vapi/chat` — endpoint custom LLM (compatible OpenAI)
+- [x] Supprimer : `_TASKS`, `_run_voice_task`, `_openai_tts`, `twilio_gather`, `twilio_respond`
+- [x] `POST /voice/vapi/chat` — endpoint custom LLM (compatible OpenAI)
   - Reçoit l'historique de conversation de Vapi
   - Lance le SupportAgent avec l'historique
   - Retourne la réponse texte au format OpenAI
   - Sauvegarde en BDD (Conversation + Messages)
   - Gestion `session_slots` par `call_id` (in-memory dict)
-- [ ] `POST /voice/vapi/events` — server messages Vapi
+- [x] `POST /voice/vapi/events` — server messages Vapi
   - `call-started` : créer Conversation en BDD, lier au numéro appelant
   - `end-of-call-report` : sauvegarder transcript, durée, résumé
-  - `function-call` : exécuter outils (search, booking) si mode tool-calling
+  - `transfer-destination-request` : retourner le numéro de transfert depuis settings
 
 #### Fonctionnalités vocales
-- [ ] Identification par numéro de téléphone (si prospect connu → `contact_captured = True`)
-- [ ] Hors horaires : message d'accueil différent + collecte callback
-- [ ] Résumé automatique d'appel (GPT) → sauvegardé en BDD → visible dashboard
-- [ ] Transfert vers agent humain si demandé (`settings.voice.transfer_number`)
+- [x] Identification par numéro de téléphone (si prospect connu → `contact_captured = True`)
+- [x] Hors horaires : message d'accueil différent + collecte callback
+- [x] Résumé automatique d'appel (GPT) → sauvegardé en BDD → visible dashboard
+- [x] Transfert vers agent humain si demandé (`settings.voice.transfer_number`)
 
 ---
 
 ### Phase 5 — Dashboard CRM & Analytics
 
 #### Vue Prospects (CRM)
-- [ ] Pipeline Kanban : Nouveau → Qualifié → RDV planifié → Converti → Perdu
-- [ ] Fiche prospect : nom, email, téléphone, historique conversations, critères, RDVs
-- [ ] Actions rapides : envoyer email, planifier rappel, changer statut
-- [ ] Filtres : par statut, date, source (chat/vocal/email), critères de recherche
-- [ ] Export CSV
+- [x] Pipeline Kanban : Nouveau → Qualifié → RDV planifié → Fermé
+- [x] Fiche prospect : nom, email, téléphone, historique conversations, critères, résumé appel
+- [x] Actions rapides : envoyer email, changer statut, notes internes
+- [x] Filtres : par canal, recherche texte (nom / email / téléphone)
+- [x] Export CSV (`GET /prospects/export`)
 
 #### Vue Agenda
-- [ ] Calendrier mensuel/hebdomadaire des visites confirmées
-- [ ] Créneaux disponibles vs occupés (sync Google Calendar)
-- [ ] Annulation / modification de RDV depuis le dashboard
-- [ ] Rappel automatique 24h avant visite (email prospect + agent)
+- [x] Liste des visites planifiées (statut `visit_booked`) avec contacts et critères
+- [x] Info bloc Google Calendar (configuration depuis les paramètres)
+- [ ] Annulation / modification de RDV depuis le dashboard — prévu Phase suivante
+- [ ] Rappel automatique 24h avant visite — prévu Phase suivante
 
 #### Analytics
-- [ ] Volume de conversations par jour/semaine/mois
-- [ ] Taux de qualification (conversations avec email capturé / total)
-- [ ] Taux de conversion RDV (RDV confirmés / qualifiés)
-- [ ] Temps de réponse moyen
-- [ ] Top recherches (critères les plus fréquents)
-- [ ] Performances par canal (chat, vocal, email)
+- [x] Volume de conversations sur période configurable (7/14/30/90 jours)
+- [x] Taux de qualification, taux de RDV, taux de fermeture
+- [x] Timeline conversations par jour (mini graphe barres)
+- [x] Répartition par canal et par statut
+- [x] Top types de biens et villes recherchés
+- [x] Budget moyen et surface moyenne recherchés
 
 #### Notifications temps réel
-- [ ] WebSocket dashboard : nouveau prospect, nouveau RDV, nouvel appel
-- [ ] Centre de notifications (cloche) avec historique
-- [ ] Badges sur les menus (X nouveaux prospects, Y RDVs aujourd'hui)
+- [x] `Notification` model + `POST /notifications` (persist + broadcast)
+- [x] WebSocket `/notifications/ws` — push temps réel vers le dashboard
+- [x] `NotificationBell` composant : badge non-lus, panel déroulant, marquer lu
+- [x] Événements notifiés : nouveau prospect qualifié, RDV confirmé, appel terminé, escalade
 
 ---
 
 ### Phase 6 — Orchestrateur (robuste)
 
 #### Algorithme de matching (scoring)
-- [ ] Score 0-100 par prospect sur chaque nouveau bien
-  - Type exact : +30 pts
-  - Ville correspondante : +25 pts
-  - Budget dans la fourchette : +20 pts
-  - Surface minimale respectée : +15 pts
-  - Nombre de pièces : +10 pts
-- [ ] Seuil configurable (défaut : 60/100 pour être notifié)
-- [ ] Tri des prospects par score décroissant
+- [x] Score 0-100 par prospect sur chaque nouveau bien
+  - Type exact : +30 pts · Ville : +25 pts · Budget : +20 pts · Surface : +15 pts · Pièces : +10 pts
+  - Crédit partiel si budget 0-10% au-dessus, surface 0-15% en dessous
+- [x] Seuil configurable depuis `settings.ai.match_score_threshold` (défaut : 60/100)
+- [x] Tri des prospects par score décroissant, top 5 dans le résumé
 
 #### Robustesse
-- [ ] Retry par étape (si step analyst échoue → on continue avec writer)
-- [ ] Statut détaillé du workflow en BDD (quelle étape, quel résultat, quelle erreur)
-- [ ] Notifications temps réel dashboard via WebSocket pendant l'exécution
-- [ ] Historique des workflows exécutés par bien
+- [x] Retry × 2 par étape (analyst, writer) — si les 2 tentatives échouent, on continue
+- [x] `WorkflowRun` model : `steps` JSON, `status`, `summary`, `started_at`, `completed_at`
+- [x] Broadcast WS `workflow_step` à chaque étape → visible en temps réel
+- [x] Notifications : workflow démarré + workflow terminé (avec résumé)
+- [x] `GET /workflows/runs` — historique consultable par bien
+- [x] Onglet "Workflow" dans la fiche bien : bouton déclencher + historique + scores
 
 ---
 
 ### Phase 7 — Sécurité & Production-readiness
 
 #### Authentification
-- [ ] Refresh tokens (JWT access 15min + refresh 7j)
-- [ ] Logout propre (blacklist refresh token dans Redis)
-- [ ] WebSocket authentifié (token en query param)
+- [x] Refresh tokens (JWT access 15min + refresh 7j)
+- [x] Logout propre (blacklist refresh token dans Redis)
+- [x] WebSocket authentifié (token en query param)
 
 #### Rate limiting
-- [ ] `slowapi` : 60 req/min par IP sur endpoints API
-- [ ] 10 messages/min par conversation WebSocket
-- [ ] 3 tentatives de login par minute par IP
+- [x] `slowapi` : 60 req/min par IP sur endpoints API
+- [x] 10 messages/min par conversation WebSocket
+- [x] 5 tentatives de login par minute par IP
 
 #### Validation & sécurité
-- [ ] Sanitisation de tous les inputs utilisateur (pas d'injection dans les prompts)
-- [ ] Validation des URLs (website_url, photo URLs) avant utilisation
-- [ ] Taille max des fichiers uploadés (PDF : 10 Mo, photos : 5 Mo)
-- [ ] CORS : liste blanche des domaines autorisés depuis settings
+- [x] Sanitisation de tous les inputs utilisateur (pas d'injection dans les prompts)
+- [x] Validation des URLs (website_url) avant utilisation
+- [x] Taille max des fichiers uploadés (PDF : 10 Mo, photos : 5 Mo)
+- [x] CORS : liste blanche des domaines autorisés depuis settings
 
 #### Monitoring
-- [ ] Logging structuré (JSON) avec niveau configurable
-- [ ] Health check enrichi : DB, Redis, OpenAI API, Vapi
+- [x] Logging structuré (JSON) avec niveau configurable
+- [x] Health check enrichi : DB, Redis, OpenAI API, Vapi
 - [ ] Alertes email si quota OpenAI dépassé
 
 ---

@@ -66,8 +66,25 @@ class Property(Base):
     charges_monthly = Column(Float, nullable=True)
     photos = Column(JSON, default=list)
     status = Column(String, default="active")
+    status_workflow = Column(String, default="draft")  # draft → review → active → sold / rented
     agent_name = Column(String, nullable=True)
     agent_email = Column(String, nullable=True)
+    # Mandat fields
+    mandate_ref = Column(String, nullable=True)
+    mandate_type = Column(String, nullable=True)       # vente | location
+    agency_fees_percent = Column(Float, nullable=True)
+    # Energy / GES
+    ges_class = Column(String, nullable=True)
+    annual_energy_cost = Column(Float, nullable=True)
+    # Amenities
+    has_cellar = Column(Boolean, default=False)
+    has_garden = Column(Boolean, default=False)
+    orientation = Column(String, nullable=True)
+    # Copro
+    lot_count = Column(Integer, nullable=True)
+    syndic_name = Column(String, nullable=True)
+    # Diagnostics (JSON: lead_paint, asbestos, electrical, gas)
+    diagnostics = Column(JSON, nullable=True)
     extra = Column("metadata", JSON, default=dict)
     embedding = Column(Vector(settings.OPENAI_EMBEDDING_DIMENSIONS), nullable=True)
     created_at = Column(DateTime, server_default=func.now())
@@ -89,6 +106,9 @@ class Conversation(Base):
     prospect_phone = Column(String, nullable=True)
     search_criteria = Column(JSON, nullable=True)
     status = Column(String, default="open")  # open, qualified, visit_booked, closed
+    notes = Column(Text, nullable=True)
+    call_summary = Column(Text, nullable=True)   # GPT summary for voice calls
+    call_duration_sec = Column(Integer, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
 
     tenant = relationship("Tenant", back_populates="conversations")
@@ -145,6 +165,55 @@ class Listing(Base):
     created_at = Column(DateTime, server_default=func.now())
 
     property = relationship("Property", back_populates="listings")
+
+
+class KnowledgeChunk(Base):
+    """
+    Text chunks from external sources (agency website, FAQs…) indexed in pgvector.
+    Used by the SupportAgent to answer questions beyond the property catalogue.
+    """
+    __tablename__ = "knowledge_chunks"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=False)
+    source_type = Column(String, nullable=False)   # "website" | "faq" | "document"
+    source_id = Column(String, nullable=True)       # URL, document_id, etc.
+    title = Column(String, nullable=True)           # page title or section heading
+    content = Column(Text, nullable=False)          # chunk text used for embedding
+    embedding = Column(Vector(settings.OPENAI_EMBEDDING_DIMENSIONS), nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+
+class Notification(Base):
+    """Dashboard notifications (new prospect, new call, escalation, etc.)."""
+    __tablename__ = "notifications"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=False)
+    type = Column(String, nullable=False)   # new_prospect, new_call, visit_booked, escalation
+    title = Column(String, nullable=False)
+    body = Column(Text, nullable=True)
+    data = Column(JSON, nullable=True)      # e.g. {"conversation_id": "..."}
+    is_read = Column(Boolean, default=False)
+    created_at = Column(DateTime, server_default=func.now())
+
+
+class WorkflowRun(Base):
+    """
+    Tracks one full execution of a multi-step workflow (e.g. new_property).
+    Each step is recorded in `steps` JSON as the workflow progresses.
+    """
+    __tablename__ = "workflow_runs"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=False)
+    workflow = Column(String, nullable=False)           # new_property, etc.
+    entity_id = Column(String, nullable=True)           # e.g. property_id
+    status = Column(String, default="running")          # running, done, done_with_errors, error
+    steps = Column(JSON, default=list)                  # [{name, status, detail, ts}]
+    summary = Column(JSON, nullable=True)               # final summary dict
+    started_at = Column(DateTime, server_default=func.now())
+    completed_at = Column(DateTime, nullable=True)
 
 
 class AgentTask(Base):

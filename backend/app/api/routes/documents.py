@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user, get_db
-from app.api.schemas import DocumentRead
+from app.api.schemas import DocumentRead, PropertyDraft
 from app.config import settings
 from app.database.models import Document, Property, Tenant, User
 
@@ -20,7 +20,7 @@ ALLOWED_CONTENT_TYPES = {
     "application/pdf",
     "application/x-pdf",
 }
-MAX_FILE_SIZE = 20 * 1024 * 1024  # 20 MB
+MAX_FILE_SIZE = settings.MAX_PDF_SIZE_MB * 1024 * 1024
 
 
 def _get_tenant(db: Session) -> Tenant:
@@ -65,7 +65,7 @@ async def upload_document(
 
     content = await file.read()
     if len(content) > MAX_FILE_SIZE:
-        raise HTTPException(status_code=413, detail="File exceeds 20 MB limit.")
+        raise HTTPException(status_code=413, detail=f"File exceeds {settings.MAX_PDF_SIZE_MB} MB limit.")
 
     # Save to disk
     doc_id = uuid4()
@@ -91,7 +91,11 @@ async def upload_document(
     try:
         await asyncio.to_thread(
             agent.run,
-            {"document_id": str(doc_id), "file_path": str(dest.resolve())},
+            {
+                "document_id": str(doc_id),
+                "file_path": str(dest.resolve()),
+                "enrich_property": True,
+            },
             db,
         )
         db.refresh(doc)
@@ -145,3 +149,106 @@ def get_document(
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found.")
     return doc
+
+
+# ── Document-first workflow ────────────────────────────────────────────────────
+
+@router.post(
+    "/upload-orphan",
+    response_model=PropertyDraft,
+    summary="Upload PDF without a property — returns pre-filled draft data",
+)
+async def upload_orphan_document(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Upload a PDF document without a linked property.
+    The AnalystAgent classifies and extracts structured data.
+    Returns a PropertyDraft with pre-filled fields the user can review
+    before creating the actual Property record.
+    """
+    import asyncio
+    from app.agents.analyst import AnalystAgent
+
+    tenant = _get_tenant(db)
+
+    if file.content_type not in ALLOWED_CONTENT_TYPES and not (
+        file.filename or ""
+    ).lower().endswith(".pdf"):
+        raise HTTPException(status_code=422, detail="Only PDF files are accepted.")
+
+    content = await file.read()
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(status_code=413, detail=f"File exceeds {settings.MAX_PDF_SIZE_MB} MB limit.")
+
+    doc_id = uuid4()
+    safe_name = f"{doc_id}_{Path(file.filename or 'document.pdf').name}"
+    dest = _upload_dir() / safe_name
+    dest.write_bytes(content)
+
+    # Store document without property_id (orphan)
+    doc = Document(
+        id=doc_id,
+        tenant_id=tenant.id,
+        property_id=None,
+        filename=file.filename or "document.pdf",
+        file_url=f"/data/uploads/{safe_name}",
+        status="processing",
+    )
+    db.add(doc)
+    db.commit()
+    db.refresh(doc)
+
+    agent = AnalystAgent(tenant_id=str(tenant.id))
+    try:
+        result = await asyncio.to_thread(
+            agent.run,
+            {
+                "document_id": str(doc_id),
+                "file_path": str(dest.resolve()),
+                "enrich_property": False,  # no property to enrich yet
+            },
+            db,
+        )
+        db.refresh(doc)
+    except Exception as exc:
+        logger.error("AnalystAgent failed on orphan: %s", exc, exc_info=True)
+        doc.status = "error"
+        db.commit()
+        raise HTTPException(status_code=500, detail="Document analysis failed.")
+
+    # Map extracted data to PropertyDraft fields
+    data = doc.extracted_data or {}
+    draft = PropertyDraft(doc_type=doc.doc_type, document_id=str(doc_id))
+
+    if doc.doc_type == "dpe":
+        draft.energy_class = data.get("energy_class")
+        draft.ges_class = data.get("ges_class")
+        draft.annual_energy_cost = data.get("energy_consumption_kwh")
+        if data.get("surface_reference"):
+            draft.surface = data["surface_reference"]
+
+    elif doc.doc_type == "copro":
+        annual = data.get("annual_charges")
+        draft.charges_monthly = round(annual / 12, 2) if annual else None
+        draft.lot_count = data.get("number_of_lots")
+        draft.syndic_name = data.get("syndic_name")
+
+    elif doc.doc_type == "mandat":
+        draft.price = data.get("property_price")
+        draft.mandate_ref = data.get("mandate_ref") or data.get("mandate_number")
+        draft.mandate_type = data.get("mandate_type")
+        draft.agency_fees_percent = data.get("agency_commission_pct")
+        draft.address = data.get("property_address")
+
+    elif doc.doc_type == "diagnostic":
+        draft.diagnostics = {
+            k: data[k] for k in ("lead_paint", "asbestos", "electrical", "gas", "termites", "flood_risk")
+            if data.get(k) is not None
+        }
+        if data.get("surface_loi_carrez"):
+            draft.surface = data["surface_loi_carrez"]
+
+    return draft

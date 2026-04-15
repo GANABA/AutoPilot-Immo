@@ -24,8 +24,21 @@ def get_current_user(
         user_id: str | None = payload.get("sub")
         if user_id is None:
             raise credentials_exception
+        # Reject refresh tokens used as access tokens
+        if payload.get("type") == "refresh":
+            raise credentials_exception
     except JWTError:
         raise credentials_exception
+
+    # Check Redis blacklist (graceful — if Redis is down, allow request)
+    try:
+        from app.api.routes.auth import is_token_blacklisted
+        if is_token_blacklisted(token):
+            raise credentials_exception
+    except HTTPException:
+        raise
+    except Exception:
+        pass
 
     user = db.query(User).filter(User.id == user_id).first()
     if user is None or not user.is_active:

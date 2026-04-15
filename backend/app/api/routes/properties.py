@@ -1,8 +1,13 @@
-from uuid import UUID
+from __future__ import annotations
+
+import logging
+from pathlib import Path
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
 from sqlalchemy.orm import Session
 
+from app.config import settings as app_settings
 from app.database.connection import get_db
 from app.database.models import Property, Tenant
 from app.api.dependencies import get_current_tenant
@@ -13,7 +18,11 @@ from app.api.schemas import (
 from app.ingestion.csv_importer import import_properties_from_csv
 from app.ingestion.embedder import embed_property
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
+
+_ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+_MAX_PHOTO_SIZE = app_settings.MAX_PHOTO_SIZE_MB * 1024 * 1024
 
 
 @router.get("", response_model=PropertyList)
@@ -116,3 +125,74 @@ def delete_property(
         raise HTTPException(status_code=404, detail="Property not found")
     db.delete(prop)
     db.commit()
+
+
+# ── Photo upload ───────────────────────────────────────────────────────────────
+
+@router.post("/{property_id}/photos", response_model=PropertyRead)
+async def upload_photos(
+    property_id: UUID,
+    files: list[UploadFile] = File(...),
+    tenant: Tenant = Depends(get_current_tenant),
+    db: Session = Depends(get_db),
+):
+    """
+    Upload one or more photos for a property.
+    Appends URLs to Property.photos (does not replace existing ones).
+    Accepted formats: JPEG, PNG, WebP, GIF (max 10 MB each).
+    """
+    prop = db.query(Property).filter(
+        Property.id == property_id,
+        Property.tenant_id == tenant.id,
+    ).first()
+    if not prop:
+        raise HTTPException(status_code=404, detail="Property not found")
+
+    upload_dir = Path(app_settings.UPLOAD_DIR) / "properties" / str(property_id)
+    upload_dir.mkdir(parents=True, exist_ok=True)
+
+    new_urls: list[str] = []
+    for file in files:
+        if file.content_type not in _ALLOWED_IMAGE_TYPES and not any(
+            (file.filename or "").lower().endswith(ext) for ext in (".jpg", ".jpeg", ".png", ".webp", ".gif")
+        ):
+            raise HTTPException(status_code=422, detail=f"'{file.filename}' is not an accepted image format.")
+
+        content = await file.read()
+        if len(content) > _MAX_PHOTO_SIZE:
+            raise HTTPException(status_code=413, detail=f"'{file.filename}' exceeds {app_settings.MAX_PHOTO_SIZE_MB} MB limit.")
+
+        file_id = uuid4()
+        suffix = Path(file.filename or "photo.jpg").suffix or ".jpg"
+        dest = upload_dir / f"{file_id}{suffix}"
+        dest.write_bytes(content)
+
+        url = f"/data/uploads/properties/{property_id}/{file_id}{suffix}"
+        new_urls.append(url)
+        logger.info("Photo uploaded for property %s: %s", property_id, url)
+
+    prop.photos = list(prop.photos or []) + new_urls
+    db.commit()
+    db.refresh(prop)
+    return prop
+
+
+@router.delete("/{property_id}/photos", response_model=PropertyRead)
+def delete_photo(
+    property_id: UUID,
+    url: str,
+    tenant: Tenant = Depends(get_current_tenant),
+    db: Session = Depends(get_db),
+):
+    """Remove a single photo URL from a property (pass as ?url=...)."""
+    prop = db.query(Property).filter(
+        Property.id == property_id,
+        Property.tenant_id == tenant.id,
+    ).first()
+    if not prop:
+        raise HTTPException(status_code=404, detail="Property not found")
+
+    prop.photos = [p for p in (prop.photos or []) if p != url]
+    db.commit()
+    db.refresh(prop)
+    return prop

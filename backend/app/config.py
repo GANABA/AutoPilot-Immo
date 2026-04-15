@@ -26,7 +26,8 @@ class Settings(BaseSettings):
     # Auth
     SECRET_KEY: str = "dev-secret-key-change-in-production"
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 480  # 8 hours
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15          # short-lived access token
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7             # long-lived refresh token
 
     # CORS — comma-separated string to avoid pydantic-settings JSON parsing
     ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173,http://127.0.0.1:5174"
@@ -45,11 +46,11 @@ class Settings(BaseSettings):
     GOOGLE_CALENDAR_CREDENTIALS_JSON: str = ""
     GOOGLE_CALENDAR_ID: str = "primary"
 
-    # ElevenLabs TTS
-    ELEVENLABS_API_KEY: str = ""
-    ELEVENLABS_VOICE_ID: str = ""
+    # Vapi (voice AI platform)
+    VAPI_API_KEY: str = ""
+    VAPI_WEBHOOK_SECRET: str = ""  # optional — set in Vapi dashboard → Server URL secret
 
-    # Public URL (used by Twilio to fetch ElevenLabs audio)
+    # Public URL
     PUBLIC_URL: str = "http://localhost:8000"
 
     # Seed data (used on first startup)
@@ -58,6 +59,16 @@ class Settings(BaseSettings):
 
     # Storage
     UPLOAD_DIR: str = "./data/uploads"
+
+    # Uploads — size limits
+    MAX_PDF_SIZE_MB: int = 10
+    MAX_PHOTO_SIZE_MB: int = 5
+
+    # Rate limiting
+    RATE_LIMIT_PER_MINUTE: int = 60   # per-IP on all API endpoints
+
+    # Observability
+    LOG_LEVEL: str = "INFO"           # DEBUG | INFO | WARNING | ERROR
 
 
 settings = Settings()

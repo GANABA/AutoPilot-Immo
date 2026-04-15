@@ -14,6 +14,7 @@ from app.database.vector_store import (
     generate_embedding,
     property_to_text,
     search_similar_properties,
+    search_knowledge_chunks,
 )
 
 logger = logging.getLogger(__name__)
@@ -22,10 +23,12 @@ logger = logging.getLogger(__name__)
 class SupportState(TypedDict):
     db: Any                     # SQLAlchemy Session (passed through state)
     tenant_id: str
+    tenant_settings: dict       # raw tenant.settings dict (read-only)
     user_message: str
     history: list[dict]         # [{role, content}] — last N turns
     criteria: dict              # extracted search filters
     properties_context: str     # formatted property list for the LLM
+    knowledge_context: str      # website/FAQ chunks for agency questions
     matched_properties: list    # raw Property objects for card rendering
     response: str               # final assistant response
     detected_email: str         # email address detected in user message (or "")
@@ -54,20 +57,22 @@ _CRITERIA_SYSTEM = (
     '"city":"nom de ville ou null"}'
 )
 
-_SUPPORT_SYSTEM = """Tu es l'assistant virtuel de l'agence ImmoPlus, spécialisée en immobilier à Lyon et sa région.
-Tu aides les prospects à trouver le bien idéal avec professionnalisme et chaleur.
+_SUPPORT_SYSTEM = """Tu es l'assistant virtuel de {agency_name}, spécialisée en immobilier.
+Tu aides les prospects à trouver le bien idéal avec {tone}.
 
 Règles :
-- Présente maximum 3 biens par réponse
+- Présente maximum {max_properties} biens par réponse
 - Mentionne toujours le prix, la surface et la localisation
 - Si aucun bien ne correspond, propose d'élargir les critères
-- Tu ne connais que les biens listés ci-dessous
-- Réponds toujours en français
+- Réponds toujours en {language}
 - Si le prospect veut visiter et que des créneaux sont disponibles, présente-les clairement
 - Si une visite vient d'être confirmée, confirme-la chaleureusement et rappelle les détails
+- Pour les questions hors sujet (non immobilières, non liées à l'agence) : {out_of_scope_response}
 
 Biens disponibles correspondant à la recherche :
 {properties_context}
+
+{knowledge_context}
 
 {slots_context}
 
@@ -129,9 +134,11 @@ class SupportAgent(BaseAgent):
         return {"criteria": criteria}
 
     def _search_properties(self, state: SupportState) -> dict:
-        """Node 2 — vector search with optional structured filters."""
+        """Node 2 — vector search (properties + knowledge chunks)."""
         criteria = state.get("criteria", {})
         db: Session = state["db"]
+        ts = state.get("tenant_settings") or {}
+        max_props = ts.get("ai", {}).get("max_properties_shown", 3)
 
         # Null-safe filter helpers
         def _f(key: str):
@@ -139,10 +146,11 @@ class SupportAgent(BaseAgent):
             return None if v in (None, "null") else v
 
         query_embedding = generate_embedding(state["user_message"])
+
         props = search_similar_properties(
             db=db,
             query_embedding=query_embedding,
-            limit=5,
+            limit=max_props + 2,  # fetch a few extra, cap in response
             min_price=_f("min_price"),
             max_price=_f("max_price"),
             min_surface=_f("min_surface"),
@@ -150,12 +158,36 @@ class SupportAgent(BaseAgent):
             city=_f("city"),
         )
 
-        context = (
+        properties_context = (
             "\n\n---\n\n".join(property_to_text(p) for p in props)
             if props
             else "Aucun bien ne correspond exactement à cette recherche dans notre catalogue actuel."
         )
-        return {"properties_context": context, "matched_properties": props}
+
+        # Search agency knowledge base (website chunks)
+        knowledge_context = ""
+        try:
+            chunks = search_knowledge_chunks(
+                db=db,
+                query_embedding=query_embedding,
+                tenant_id=state["tenant_id"],
+                limit=3,
+            )
+            if chunks:
+                knowledge_context = (
+                    "Informations sur l'agence (site web) :\n"
+                    + "\n\n".join(
+                        f"[{c.title}]\n{c.content}" for c in chunks
+                    )
+                )
+        except Exception as exc:
+            logger.warning("Knowledge chunk search failed: %s", exc)
+
+        return {
+            "properties_context": properties_context,
+            "matched_properties": props[:max_props],
+            "knowledge_context": knowledge_context,
+        }
 
     def _detect_contact(self, state: SupportState) -> dict:
         """Node 3 — detect email/name in the user message via regex."""
@@ -269,10 +301,35 @@ class SupportAgent(BaseAgent):
         else:
             contact_context = "Note : coordonnées prospect déjà enregistrées — ne redemandez pas ses informations."
 
-        # Use replace() instead of format() — property descriptions may contain braces
+        # Read tenant settings (with defaults)
+        ts = state.get("tenant_settings") or {}
+        ai_cfg = ts.get("ai", {})
+        agency_cfg = ts.get("agency", {})
+
+        # Build agency contact string for out-of-scope replies
+        agency_contact_parts = []
+        if agency_cfg.get("phone"):
+            agency_contact_parts.append(f"tél. {agency_cfg['phone']}")
+        if agency_cfg.get("email"):
+            agency_contact_parts.append(f"email {agency_cfg['email']}")
+        agency_contact = " / ".join(agency_contact_parts) if agency_contact_parts else ""
+
+        out_of_scope = ai_cfg.get(
+            "out_of_scope_response",
+            "Je suis spécialisé dans la recherche immobilière. Pour toute autre demande, contactez-nous directement.",
+        )
+        if agency_contact:
+            out_of_scope = out_of_scope.rstrip(".") + f" ({agency_contact})."
+
         system = (
             _SUPPORT_SYSTEM
+            .replace("{agency_name}", agency_cfg.get("name", "ImmoPlus"))
+            .replace("{tone}", ai_cfg.get("tone", "professionnalisme et chaleur"))
+            .replace("{max_properties}", str(ai_cfg.get("max_properties_shown", 3)))
+            .replace("{language}", ai_cfg.get("language", "français"))
+            .replace("{out_of_scope_response}", out_of_scope)
             .replace("{properties_context}", state["properties_context"])
+            .replace("{knowledge_context}", state.get("knowledge_context", ""))
             .replace("{slots_context}", slots_context)
             .replace("{contact_context}", contact_context)
         )
@@ -310,10 +367,12 @@ class SupportAgent(BaseAgent):
         state: SupportState = {
             "db": db,
             "tenant_id": self.tenant_id,
+            "tenant_settings": input_data.get("tenant_settings", {}),
             "user_message": input_data["message"],
             "history": input_data.get("history", []),
             "criteria": {},
             "properties_context": "",
+            "knowledge_context": "",
             "matched_properties": [],
             "response": "",
             "detected_email": "",
@@ -326,7 +385,7 @@ class SupportAgent(BaseAgent):
         result = self._graph.invoke(state)
 
         # Serialize matched properties for WebSocket transmission
-        _IMAGES = {
+        _FALLBACK_IMAGES = {
             "appartement": [
                 "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400&q=80",
                 "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=400&q=80",
@@ -342,7 +401,11 @@ class SupportAgent(BaseAgent):
         _DEFAULT_IMG = "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=400&q=80"
 
         def _img(prop, idx):
-            imgs = _IMAGES.get(getattr(prop, "type", ""), [_DEFAULT_IMG])
+            # Use real photos if available, fall back to Unsplash
+            photos = getattr(prop, "photos", None) or []
+            if photos:
+                return photos[0]
+            imgs = _FALLBACK_IMAGES.get(getattr(prop, "type", ""), [_DEFAULT_IMG])
             return imgs[idx % len(imgs)]
 
         cards = [

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Mail, Lock, Home, AlertCircle, Loader2 } from 'lucide-react'
-import { login, setToken } from '../api/client'
+import { login } from '../api/client'
 
 export default function LoginPage({ onLogin }) {
   const [email, setEmail] = useState('admin@immoplus.fr')
@@ -13,8 +13,7 @@ export default function LoginPage({ onLogin }) {
     setError('')
     setLoading(true)
     try {
-      const data = await login(email, password)
-      setToken(data.access_token)
+      await login(email, password)  // setToken(access, refresh) called inside login()
       onLogin()
     } catch (err) {
       setError(err.message)

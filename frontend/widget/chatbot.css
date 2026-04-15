@@ -273,18 +273,34 @@
   fill: white;
 }
 
-/* ── Property cards in chat ─────────────────────────────────────────── */
-.ap-property-cards {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+/* ── Property cards — horizontal carousel ───────────────────────────── */
+.ap-cards-wrap {
   align-self: flex-start;
   width: 100%;
-  max-width: 300px;
+  max-width: 310px;
   animation: ap-fadeIn 0.2s ease;
 }
 
+.ap-property-cards {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 6px;
+  /* hide native scrollbar */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.ap-property-cards::-webkit-scrollbar { display: none; }
+
 .ap-prop-card {
+  flex-shrink: 0;
+  width: 185px;
+  scroll-snap-align: start;
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
@@ -300,48 +316,92 @@
 
 .ap-prop-img {
   width: 100%;
-  height: 110px;
+  height: 100px;
   object-fit: cover;
   display: block;
 }
 
 .ap-prop-body {
-  padding: 10px 12px;
+  padding: 9px 11px;
 }
 
 .ap-prop-price {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 800;
   color: #1d4ed8;
   letter-spacing: -0.3px;
 }
 
 .ap-prop-title {
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
   color: #1e293b;
   margin: 3px 0 2px;
   line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .ap-prop-location {
-  font-size: 11px;
+  font-size: 10.5px;
   color: #64748b;
   margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .ap-prop-specs {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 4px;
 }
 
 .ap-prop-specs span {
-  font-size: 11px;
+  font-size: 10.5px;
   color: #64748b;
   background: #f1f5f9;
-  padding: 2px 7px;
+  padding: 2px 6px;
   border-radius: 100px;
+}
+
+/* Scroll indicator dots */
+.ap-cards-dots {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+  margin-top: 6px;
+}
+
+.ap-cards-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  transition: background 0.2s, transform 0.2s;
+  cursor: pointer;
+}
+
+.ap-cards-dots span.ap-dot-active {
+  background: #1d4ed8;
+  transform: scale(1.2);
+}
+
+/* Scroll hint arrow (only shown when >1 card) */
+.ap-cards-arrow {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: 10.5px;
+  color: #94a3b8;
+}
+
+.ap-cards-arrow svg {
+  width: 12px;
+  height: 12px;
 }
 
 @media (max-width: 420px) {

@@ -17,7 +17,7 @@ from openai import OpenAI
 
 from app.config import settings
 from app.database.connection import SessionLocal
-from app.database.models import Conversation, Message
+from app.database.models import Conversation, Message, Tenant
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +80,16 @@ def send_followup_drafts(self):
     errors = 0
 
     try:
-        cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+        # Read follow-up delay from tenant settings
+        tenant = db.query(Tenant).filter_by(slug="immoplus").first()
+        delay_days = 7
+        if tenant:
+            delay_days = (
+                (tenant.settings or {})
+                .get("email", {})
+                .get("followup_delay_days", 7)
+            )
+        cutoff = datetime.now(timezone.utc) - timedelta(days=delay_days)
 
         convs = (
             db.query(Conversation)

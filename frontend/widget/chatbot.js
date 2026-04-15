@@ -160,14 +160,23 @@
     function appendPropertyCards(items) {
       removeTyping();
       if (!items || items.length === 0) return;
-      const wrapper = document.createElement("div");
-      wrapper.className = "ap-property-cards";
-      items.slice(0, 3).forEach(p => {
-        const fmt = (n) => n ? Number(n).toLocaleString("fr-FR") + " €" : "";
+      const cards = items.slice(0, 3);
+      const fmt = (n) => n ? Number(n).toLocaleString("fr-FR") + " €" : "";
+
+      // Outer wrapper
+      const wrap = document.createElement("div");
+      wrap.className = "ap-cards-wrap";
+
+      // Scrollable row
+      const row = document.createElement("div");
+      row.className = "ap-property-cards";
+
+      cards.forEach(p => {
         const card = document.createElement("div");
         card.className = "ap-prop-card";
         card.innerHTML = `
-          <img class="ap-prop-img" src="${p.image}" alt="${p.title}" loading="lazy" />
+          <img class="ap-prop-img" src="${p.image}" alt="${p.title}" loading="lazy"
+               onerror="this.src='https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=400&q=80'" />
           <div class="ap-prop-body">
             <div class="ap-prop-price">${fmt(p.price)}</div>
             <div class="ap-prop-title">${p.title}</div>
@@ -180,9 +189,48 @@
               ${p.energy_class ? "<span>⚡ " + p.energy_class + "</span>" : ""}
             </div>
           </div>`;
-        wrapper.appendChild(card);
+        row.appendChild(card);
       });
-      messagesEl.appendChild(wrapper);
+
+      wrap.appendChild(row);
+
+      // Scroll indicator dots (only if >1 card)
+      if (cards.length > 1) {
+        const dotsEl = document.createElement("div");
+        dotsEl.className = "ap-cards-dots";
+        const dots = cards.map((_, i) => {
+          const d = document.createElement("span");
+          if (i === 0) d.classList.add("ap-dot-active");
+          d.addEventListener("click", () => {
+            const cardW = row.firstChild ? row.firstChild.offsetWidth + 10 : 195;
+            row.scrollTo({ left: i * cardW, behavior: "smooth" });
+          });
+          dotsEl.appendChild(d);
+          return d;
+        });
+
+        // Update active dot on scroll
+        row.addEventListener("scroll", () => {
+          const cardW = row.firstChild ? row.firstChild.offsetWidth + 10 : 195;
+          const idx = Math.round(row.scrollLeft / cardW);
+          dots.forEach((d, i) => d.classList.toggle("ap-dot-active", i === idx));
+        }, { passive: true });
+
+        wrap.appendChild(dotsEl);
+
+        // Scroll hint
+        const hint = document.createElement("div");
+        hint.className = "ap-cards-arrow";
+        hint.innerHTML = `Glissez pour voir plus
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>`;
+        wrap.appendChild(hint);
+        // Hide hint after first scroll
+        row.addEventListener("scroll", () => { hint.style.display = "none"; }, { once: true, passive: true });
+      }
+
+      messagesEl.appendChild(wrap);
       messagesEl.scrollTop = messagesEl.scrollHeight;
     }
 
@@ -341,8 +389,13 @@
     btn.addEventListener("click", () => (isOpen ? closePanel() : openPanel()));
     closeBtn.addEventListener("click", closePanel);
 
-    // Auto-open after 2.5s
-    setTimeout(() => { if (!isOpen) openPanel(); }, 2500);
+    // Auto-open delay — configurable via data-open-delay="3" (seconds) on the script tag
+    const openDelaySec = parseFloat(
+      (currentScript && currentScript.dataset.openDelay) || "3"
+    );
+    if (openDelaySec >= 0) {
+      setTimeout(() => { if (!isOpen) openPanel(); }, openDelaySec * 1000);
+    }
 
     // ── Input events ───────────────────────────────────────────────────────
     inputEl.addEventListener("input", () => {

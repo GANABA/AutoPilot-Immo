@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from openai import OpenAI
 
 from app.config import settings
-from app.database.models import Property
+from app.database.models import KnowledgeChunk, Property
 
 logger = logging.getLogger(__name__)
 
@@ -91,6 +91,25 @@ def search_similar_properties(
     return (
         query
         .order_by(Property.embedding.cosine_distance(query_embedding))
+        .limit(limit)
+        .all()
+    )
+
+
+def search_knowledge_chunks(
+    db: Session,
+    query_embedding: list[float],
+    tenant_id: str,
+    limit: int = 3,
+) -> list[KnowledgeChunk]:
+    """Return knowledge chunks ordered by cosine similarity to query_embedding."""
+    return (
+        db.query(KnowledgeChunk)
+        .filter(
+            KnowledgeChunk.tenant_id == tenant_id,
+            KnowledgeChunk.embedding.isnot(None),
+        )
+        .order_by(KnowledgeChunk.embedding.cosine_distance(query_embedding))
         .limit(limit)
         .all()
     )
