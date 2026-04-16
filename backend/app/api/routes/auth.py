@@ -13,7 +13,6 @@ from app.config import settings
 from app.database.connection import get_db
 from app.database.models import User
 from app.api.schemas import TokenResponse, LoginRequest
-from app.api.limiter import limiter
 
 router = APIRouter()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -103,9 +102,12 @@ def login_form(
 
 
 @router.post("/login", response_model=TokenResponse, summary="JSON login")
-@limiter.limit("5/minute")
 def login_json(request: Request, body: LoginRequest, db: Session = Depends(get_db)):
-    """JSON login — used by the React dashboard. Rate-limited to 5/minute per IP."""
+    """
+    JSON login — used by the React dashboard.
+    Note: per-endpoint rate limiting removed (Render proxy collapses all IPs to one).
+    The global slowapi limit (60 req/min) still applies.
+    """
     user = _authenticate_user(body.email, body.password, db)
     return TokenResponse(
         access_token=create_access_token(str(user.id)),

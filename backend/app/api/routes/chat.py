@@ -26,28 +26,44 @@ _WS_RATE_WINDOW_SEC = 60.0   # sliding window in seconds
 # ── Working hours helpers ─────────────────────────────────────────────────────
 
 def _is_within_working_hours(tenant_settings: dict) -> bool:
-    """Return True if current Paris time is within configured working hours."""
+    """
+    Return True if current Paris time is within configured working hours.
+    Default: always open (True) — never blocks the chatbot unless explicitly configured.
+    Supports the per-day format: {monday: {open, close, enabled}, ...}
+    Legacy flat format {start, end} is treated as always-open.
+    """
     working_hours = tenant_settings.get("working_hours", {})
     if not working_hours:
         return True
 
+    # Legacy flat format (old seed data: {"start": "09:00", "end": "19:00"})
+    # → treat as always open so the chatbot is never blocked unintentionally
+    if "start" in working_hours or "end" in working_hours:
+        return True
+
+    # Per-day format: look up today's config
     try:
         from zoneinfo import ZoneInfo
         now = datetime.now(ZoneInfo("Europe/Paris"))
     except Exception:
-        now = datetime.utcnow()  # fallback: assume UTC≈Paris
+        now = datetime.utcnow()
 
     day_names = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
     day_key = day_names[now.weekday()]
-    day_cfg = working_hours.get(day_key, {})
+    day_cfg = working_hours.get(day_key)
+
+    # No entry for today → default open (never silently block the chatbot)
+    if not day_cfg:
+        return True
 
     if not day_cfg.get("enabled", True):
         return False
 
     open_str = day_cfg.get("open")
     close_str = day_cfg.get("close")
+    # Missing times → default open
     if not open_str or not close_str:
-        return False
+        return True
 
     try:
         oh, om = map(int, open_str.split(":"))

@@ -97,7 +97,12 @@ export const login = async (email, password) => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
   })
-  if (!res.ok) throw new Error('Identifiants incorrects')
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Email ou mot de passe incorrect')
+    if (res.status === 429) throw new Error('Trop de tentatives, réessayez dans une minute')
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.detail || `Erreur serveur (${res.status})`)
+  }
   const data = await res.json()
   setToken(data.access_token, data.refresh_token)
   return data
