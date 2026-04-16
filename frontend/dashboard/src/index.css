@@ -2,4 +2,67 @@
 @tailwind components;
 @tailwind utilities;
 
-body { @apply bg-slate-50 text-slate-900; }
+@layer base {
+  :root {
+    --color-noir:       #0A0A0F;
+    --color-ardoise:    #141420;
+    --color-charbon:    #1F1F2E;
+    --color-or:         #C9A96E;
+    --color-or-light:   #DFC08A;
+    --color-or-dark:    #A8823A;
+    --color-or-pale:    #F5EDD8;
+    --color-creme:      #F8F6F1;
+    --color-lin:        #E8E2D5;
+    --color-sable:      #9B9488;
+  }
+
+  * {
+    box-sizing: border-box;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  html, body, #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: 'DM Sans', system-ui, sans-serif;
+    background-color: var(--color-creme);
+    color: var(--color-noir);
+  }
+
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--color-lin); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--color-sable); }
+}
+
+@layer components {
+  .input-field {
+    @apply w-full px-3 py-2 border border-lin rounded-lg text-sm bg-white transition-colors;
+    color: var(--color-noir);
+  }
+  .input-field:focus {
+    outline: none;
+    border-color: var(--color-or);
+    box-shadow: 0 0 0 3px rgba(201, 169, 110, 0.15);
+  }
+  .input-field::placeholder { color: var(--color-sable); }
+
+  .input-field:disabled {
+    @apply bg-creme text-sable opacity-60;
+  }
+
+  .card {
+    @apply bg-white border border-lin rounded-xl shadow-card;
+  }
+}
+
+@keyframes pulse-slow {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+.animate-pulse-slow { animation: pulse-slow 2.5s ease-in-out infinite; }

@@ -144,16 +144,23 @@ def init_db() -> None:
 
     Base.metadata.create_all(bind=engine)
 
-    with engine.connect() as conn:
-        for col_name, col_def in _PROPERTY_MIGRATIONS:
-            conn.execute(text(
-                f"ALTER TABLE properties ADD COLUMN IF NOT EXISTS {col_name} {col_def}"
-            ))
-        for col_name, col_def in _CONVERSATION_MIGRATIONS:
-            conn.execute(text(
-                f"ALTER TABLE conversations ADD COLUMN IF NOT EXISTS {col_name} {col_def}"
-            ))
-        conn.commit()
+    # Run inline DDL migrations — each column in its own connection so a timeout
+    # on one statement does not abort the others.  We disable statement_timeout
+    # at session scope (SET, not SET LOCAL) to override Render's role-level default.
+    all_migrations = (
+        [("properties", n, d) for n, d in _PROPERTY_MIGRATIONS]
+        + [("conversations", n, d) for n, d in _CONVERSATION_MIGRATIONS]
+    )
+    for table, col_name, col_def in all_migrations:
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("SET statement_timeout = 0"))
+                conn.execute(text(
+                    f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {col_name} {col_def}"
+                ))
+                conn.commit()
+        except Exception as exc:
+            logger.warning("DDL migration skipped (%s.%s): %s", table, col_name, exc)
 
     _seed_initial_data()
 
