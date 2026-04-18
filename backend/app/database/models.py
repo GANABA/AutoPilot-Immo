@@ -1,6 +1,6 @@
-import uuid
-
 from __future__ import annotations
+
+import uuid
 
 from sqlalchemy import (
     Boolean, Column, DateTime, Float, ForeignKey,
