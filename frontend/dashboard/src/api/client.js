@@ -133,6 +133,9 @@ export const getProperties = (params = {}) => {
   return req(`/properties${q ? '?' + q : ''}`, { headers: authHeaders() })
 }
 
+export const getProperty = (id) =>
+  req(`/properties/${id}`, { headers: authHeaders() })
+
 export const createProperty = (body) =>
   req('/properties', {
     method: 'POST',
@@ -298,3 +301,10 @@ export const markNotificationRead = (id) =>
 
 export const markAllNotificationsRead = () =>
   req('/notifications/read-all', { method: 'PATCH', headers: authHeaders() })
+
+// ── Morning brief (S1) ────────────────────────────────────────────────────────
+export const getMorningBrief = () => req('/stats/morning-brief', { headers: authHeaders() })
+
+// ── Generate listings direct (S2) ─────────────────────────────────────────────
+export const generateListingsDirect = (propertyId) =>
+  req(`/listings/${propertyId}/generate`, { method: 'POST', headers: authHeaders() })

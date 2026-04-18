@@ -114,9 +114,12 @@ def _seed_initial_data() -> None:
 
 
 _CONVERSATION_MIGRATIONS = [
-    ("notes",             "TEXT"),
-    ("call_summary",      "TEXT"),
-    ("call_duration_sec", "INTEGER"),
+    ("notes",               "TEXT"),
+    ("call_summary",        "TEXT"),
+    ("call_duration_sec",   "INTEGER"),
+    ("visit_property_id",   "UUID REFERENCES properties(id)"),
+    ("visit_booked_at",     "TIMESTAMPTZ"),
+    ("voice_call_id",       "VARCHAR"),
 ]
 
 _PROPERTY_MIGRATIONS = [

@@ -1,5 +1,7 @@
 import uuid
 
+from __future__ import annotations
+
 from sqlalchemy import (
     Boolean, Column, DateTime, Float, ForeignKey,
     Integer, String, Text, JSON, func,
@@ -109,9 +111,13 @@ class Conversation(Base):
     notes = Column(Text, nullable=True)
     call_summary = Column(Text, nullable=True)   # GPT summary for voice calls
     call_duration_sec = Column(Integer, nullable=True)
+    visit_property_id = Column(UUID(as_uuid=True), ForeignKey("properties.id"), nullable=True)
+    visit_booked_at = Column(DateTime(timezone=True), nullable=True)
+    voice_call_id = Column(String, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
 
     tenant = relationship("Tenant", back_populates="conversations")
+    visited_property = relationship("Property", foreign_keys=[visit_property_id])
     messages = relationship(
         "Message", back_populates="conversation", cascade="all, delete-orphan"
     )

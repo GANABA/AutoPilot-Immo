@@ -2,11 +2,11 @@ import { useEffect, useState, useCallback } from 'react'
 import {
   User, Phone, Mail, MessageSquare, Calendar, Tag,
   ChevronRight, Search, X, Send, Download, RefreshCw,
-  Clock,
+  Clock, Building2,
 } from 'lucide-react'
 import {
   getProspects, getProspect, updateProspect,
-  sendProspectEmail, getProspectsExportUrl
+  sendProspectEmail, getProspectsExportUrl, getProperty,
 } from '../api/client'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -104,11 +104,21 @@ function ProspectDetail({ prospectId, onClose, onUpdated }) {
   const [sendingEmail, setSendingEmail] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
   const [tab, setTab] = useState('info')
+  const [visitProperty, setVisitProperty] = useState(null)
 
   useEffect(() => {
     setLoading(true)
+    setVisitProperty(null)
     getProspect(prospectId)
-      .then(d => { setData(d); setNotes(d.notes || '') })
+      .then(d => {
+        setData(d)
+        setNotes(d.notes || '')
+        if (d.visit_property_id) {
+          getProperty(d.visit_property_id)
+            .then(setVisitProperty)
+            .catch(() => {})
+        }
+      })
       .finally(() => setLoading(false))
   }, [prospectId])
 
@@ -282,6 +292,32 @@ function ProspectDetail({ prospectId, onClose, onUpdated }) {
                    style={{ background: '#F8F6F1', border: '1px solid #E8E2D5', color: '#1A1A24' }}>
                   {data.call_summary}
                 </p>
+              </div>
+            )}
+
+            {visitProperty && (
+              <div>
+                <div className="text-xs font-medium uppercase tracking-widest mb-2 flex items-center gap-1"
+                     style={{ color: '#9B9488', letterSpacing: '0.1em' }}>
+                  <Building2 size={10} />
+                  Bien concern\u00e9 par la visite
+                </div>
+                <div className="flex items-start gap-2.5 rounded-lg p-3"
+                     style={{ background: '#F8F6F1', border: '1px solid #E8E2D5' }}>
+                  <Building2 size={14} style={{ color: '#C9A96E', flexShrink: 0, marginTop: '1px' }} />
+                  <p className="text-sm leading-snug" style={{ color: '#1A1A24' }}>
+                    {visitProperty.title}
+                    {visitProperty.city && <span style={{ color: '#9B9488' }}> &mdash; {visitProperty.city}</span>}
+                    {visitProperty.price && (
+                      <span>
+                        <span style={{ color: '#9B9488' }}> &mdash; </span>
+                        <span style={{ color: '#C9A96E' }} className="font-medium">
+                          {Number(visitProperty.price).toLocaleString('fr-FR')}&nbsp;\u20ac
+                        </span>
+                      </span>
+                    )}
+                  </p>
+                </div>
               </div>
             )}
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Calendar, Phone, Mail, MessageSquare, Clock, User, RefreshCw } from 'lucide-react'
-import { getProspects } from '../api/client'
+import { Calendar, Phone, Mail, MessageSquare, Clock, User, RefreshCw, Building2 } from 'lucide-react'
+import { getProspects, getProperty } from '../api/client'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -32,6 +32,15 @@ const CHANNEL_ICONS = {
 function RdvCard({ prospect }) {
   const Icon = CHANNEL_ICONS[prospect.channel] || Calendar
   const criteria = fmtCriteria(prospect.search_criteria)
+  const [property, setProperty] = useState(null)
+
+  useEffect(() => {
+    if (prospect.visit_property_id) {
+      getProperty(prospect.visit_property_id)
+        .then(setProperty)
+        .catch(() => {})
+    }
+  }, [prospect.visit_property_id])
 
   return (
     <div className="bg-white border border-lin rounded-xl p-5 shadow-card hover:shadow-card-md transition-shadow">
@@ -50,6 +59,19 @@ function RdvCard({ prospect }) {
               RDV planifi\u00e9
             </span>
           </div>
+
+          {property && (
+            <div className="flex items-center gap-1.5 mb-2 text-xs" style={{ color: '#9B9488' }}>
+              <Building2 size={11} style={{ color: '#9B9488', flexShrink: 0 }} />
+              <span>
+                {property.title}
+                {property.city && <span> &mdash; {property.city}</span>}
+                {property.price && (
+                  <span> &mdash; <span style={{ color: '#C9A96E' }} className="font-medium">{Number(property.price).toLocaleString('fr-FR')}&nbsp;\u20ac</span></span>
+                )}
+              </span>
+            </div>
+          )}
 
           {criteria && (
             <p className="text-xs mb-2" style={{ color: '#9B9488' }}>{criteria}</p>

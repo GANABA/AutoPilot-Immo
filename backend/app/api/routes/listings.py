@@ -66,6 +66,38 @@ async def generate_listings(
     )
 
 
+# ── Direct generate (sync, minimal response) ─────────────────────────────────
+
+@router.post(
+    "/{property_id}/generate",
+    summary="Generate listings directly via WriterAgent (sync, returns IDs)",
+)
+def generate_listings_direct(
+    property_id: UUID,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    tenant = _get_tenant(db)
+
+    prop = db.query(Property).filter_by(id=property_id, tenant_id=tenant.id).first()
+    if not prop:
+        raise HTTPException(status_code=404, detail="Property not found.")
+
+    from app.agents.writer import WriterAgent
+
+    agent = WriterAgent(tenant_id=str(tenant.id))
+    try:
+        result = agent.run({"property_id": str(property_id)}, db)
+    except Exception as exc:
+        logger.error("WriterAgent (direct) error: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Agent error: {exc}")
+
+    return {
+        "drafts_created": len(result["saved_ids"]),
+        "listing_ids": result["saved_ids"],
+    }
+
+
 # ── CRUD ──────────────────────────────────────────────────────────────────────
 
 @router.get(

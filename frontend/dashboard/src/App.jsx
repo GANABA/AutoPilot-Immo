@@ -2,7 +2,7 @@ import { useState } from 'react'
 import {
   LayoutDashboard, Building2, MessageSquare, Settings,
   Bot, Mic, FileCode2, ExternalLink, LogOut, Users, BarChart2,
-  Calendar, ChevronRight, Dot,
+  Calendar, Phone, ChevronRight, Dot,
 } from 'lucide-react'
 import { getToken, logout as apiLogout } from './api/client'
 import LoginPage from './pages/LoginPage'
@@ -13,13 +13,15 @@ import SettingsPage from './pages/SettingsPage'
 import ProspectsPage from './pages/ProspectsPage'
 import AnalyticsPage from './pages/AnalyticsPage'
 import CalendarPage from './pages/CalendarPage'
+import CallsPage from './pages/CallsPage'
 import NotificationBell from './components/NotificationBell'
 
 const NAV = [
-  { id: 'dashboard',     icon: LayoutDashboard, label: 'Tableau de bord' },
+  { id: 'dashboard',     icon: LayoutDashboard, label: 'Briefing' },
   { id: 'properties',    icon: Building2,        label: 'Biens' },
   { id: 'prospects',     icon: Users,            label: 'Prospects' },
   { id: 'calendar',      icon: Calendar,         label: 'Agenda' },
+  { id: 'calls',         icon: Phone,            label: 'Appels' },
   { id: 'analytics',     icon: BarChart2,        label: 'Analytics' },
   { id: 'conversations', icon: MessageSquare,    label: 'Conversations' },
   { id: 'settings',      icon: Settings,         label: 'Param\u00e8tres' },
@@ -164,6 +166,7 @@ export default function App() {
     properties:    <PropertiesPage />,
     prospects:     <ProspectsPage />,
     calendar:      <CalendarPage />,
+    calls:         <CallsPage />,
     analytics:     <AnalyticsPage />,
     conversations: <ConversationsPage />,
     settings:      <SettingsPage />,
